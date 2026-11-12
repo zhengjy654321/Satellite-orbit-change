@@ -1,0 +1,796 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>卫星变轨实验室</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Noto+Sans+SC:wght@400;500;700&family=Noto+Serif+SC:wght@700&display=swap">
+<style>
+/* Layout: app shell — header strip, a space-black stage beside an instrument panel; stacks on phones */
+:root{--bg:#e8ecf2;--panel:#f5f7fa;--card:#fff;--ink:#121926;--mute:#586477;--line:#d2d8e2;--chip:#e1e6ee;--hot:#c9561a;--cold:#2565b5;--good:#137a50;--bad:#bb3427;
+--fh:'Noto Serif SC','Songti SC',serif;--fb:'Noto Sans SC','PingFang SC','Microsoft YaHei',system-ui,sans-serif;--fm:'IBM Plex Mono',ui-monospace,Menlo,monospace}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#090d16;--panel:#0e1421;--card:#141b2a;--ink:#e2e7f0;--mute:#8b96aa;--line:#222b3c;--chip:#1a2233;--hot:#f2873f;--cold:#62a6f2;--good:#3cbf86;--bad:#ef6b5d;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#090d16;--panel:#0e1421;--card:#141b2a;--ink:#e2e7f0;--mute:#8b96aa;--line:#222b3c;--chip:#1a2233;--hot:#f2873f;--cold:#62a6f2;--good:#3cbf86;--bad:#ef6b5d;color-scheme:dark}
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font:14px/1.55 var(--fb);display:flex;flex-direction:column}
+.top{display:flex;align-items:center;gap:8px 16px;flex-wrap:wrap;padding-block:10px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+h1{font:700 20px/1.2 var(--fh);margin:0;letter-spacing:.03em;text-wrap:balance}
+.sub{color:var(--mute);font-size:12px}
+.tabs{display:flex;background:var(--chip);border-radius:10px;padding:3px;margin-left:auto}
+.tabs button{border:0;background:none;color:var(--mute);padding:6px 12px;border-radius:8px;font:500 13px var(--fb);cursor:pointer}
+.tabs button.on{background:var(--card);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.14)}
+.wrap{flex:1;min-height:0;display:flex;gap:12px;padding-block:0 12px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.stage{position:relative;flex:1;min-width:0;border-radius:14px;overflow:hidden;background:#060a14}
+.stage canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none;display:block;cursor:grab}
+.hud{position:absolute;display:flex;gap:4px;align-items:center;flex-wrap:wrap;background:rgba(9,14,26,.78);border:1px solid rgba(255,255,255,.09);border-radius:10px;padding:4px;color:#dfe6f3;font:12px var(--fm)}
+.hud.tl{top:8px;left:8px;max-width:calc(100% - 16px)}.hud.tr{top:8px;right:8px}
+@media (max-width:619px){.hud.tr{top:auto;bottom:8px}.toast{bottom:56px}}
+.hud button,.hud select{background:rgba(255,255,255,.07);color:#e8eef8;border:1px solid rgba(255,255,255,.12);border-radius:7px;padding:4px 9px;font:12px var(--fb);cursor:pointer;width:auto}
+.hud button:hover{background:rgba(255,255,255,.16)}
+.hud select option{background:#101828}
+.hud .v{min-width:56px;text-align:center;font-variant-numeric:tabular-nums}
+.hud .clk{padding:0 6px;color:#9fb0c9;font-variant-numeric:tabular-nums}
+.toast{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);max-width:min(560px,calc(100% - 24px));background:rgba(12,18,32,.92);color:#f1f4fa;border:1px solid rgba(255,255,255,.14);border-radius:10px;padding:8px 12px;font-size:13px;line-height:1.5;opacity:0;transition:opacity .25s;pointer-events:none}
+.toast.on{opacity:1}
+.panel{width:390px;flex:none;overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:2px 14px 16px}
+details{border-bottom:1px solid var(--line);padding-bottom:10px}details:last-child{border-bottom:0}
+summary{font:700 15px/1.3 var(--fh);padding:12px 0 8px;cursor:pointer;list-style:none;display:flex;justify-content:space-between}
+summary::-webkit-details-marker{display:none}
+summary::after{content:'＋';color:var(--mute);font:400 14px var(--fm)}details[open]>summary::after{content:'－'}
+.stack{display:flex;flex-direction:column;gap:9px}
+.lab{font-size:12px;color:var(--mute);letter-spacing:.06em;margin-top:2px}
+.g2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.g3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.f{display:flex;flex-direction:column;gap:3px;min-width:0}.f>span{font-size:12px;color:var(--mute)}
+input,select{font:13px var(--fm);background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:7px;padding:6px 8px;min-width:0;width:100%}
+input[type=range]{padding:0;border:0;background:none;accent-color:var(--hot)}
+input[type=checkbox]{width:auto;accent-color:var(--hot)}
+.chk{display:flex;gap:7px;align-items:flex-start;font-size:13px;color:var(--ink)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:999px;padding:4px 10px;font:12px var(--fb);cursor:pointer}
+.chip small{font-family:var(--fm);color:var(--mute);margin-left:4px}
+.chip.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}.chip.on small{color:inherit;opacity:.75}
+.b{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:8px;padding:7px 10px;font:500 13px var(--fb);cursor:pointer}
+.b:hover{border-color:var(--mute)}
+.b.hot{background:var(--hot);border-color:var(--hot);color:#fff}.b.cold{background:var(--cold);border-color:var(--cold);color:#fff}
+.b.on{outline:2px solid var(--hot);outline-offset:1px}
+.b.wide{width:100%;padding:10px;font-weight:700}
+.btns{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.seg{display:flex;background:var(--chip);border-radius:9px;padding:3px}
+.seg button{flex:1;border:0;background:none;color:var(--mute);padding:5px 4px;border-radius:7px;font:12px var(--fb);cursor:pointer}
+.seg button.on{background:var(--card);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.12)}
+button:focus-visible,select:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid var(--cold);outline-offset:2px}
+.ships{display:flex;flex-wrap:wrap;gap:6px}
+.ship{display:flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:8px;padding:5px 10px;font:500 13px var(--fb);cursor:pointer}
+.ship i{width:10px;height:10px;border-radius:50%}.ship.on{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}.ship.dead{opacity:.55}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:2px 12px;margin:0;font-size:13px}
+.kv dt{color:var(--mute)}.kv dd{margin:0;text-align:right;font-family:var(--fm);font-variant-numeric:tabular-nums}
+.note{background:var(--card);border:1px solid var(--line);border-radius:9px;padding:9px 11px;font-size:13px;line-height:1.6}
+.note b{color:var(--hot);font-weight:700}
+.small{font-size:12px;color:var(--mute);margin:0;line-height:1.55}
+.ev{display:flex;justify-content:space-between;gap:8px;align-items:center;font-size:12px;padding:4px 0;border-top:1px dashed var(--line)}
+.ev button{border:0;background:none;color:var(--bad);cursor:pointer;font-size:12px}
+.tw{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:12px}
+th,td{padding:4px 5px;text-align:right;white-space:nowrap;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}
+th{color:var(--mute);font-weight:500}td{font-family:var(--fm)}th:first-child,td:first-child{text-align:left;font-family:var(--fb)}
+.ok{color:var(--good)}.bad{color:var(--bad)}
+#eChart{width:100%;height:250px;display:block}
+@media (max-width:880px){html,body{height:auto}.wrap{flex-direction:column}.stage{flex:none;height:64vh;min-height:360px}.panel{width:auto;overflow:visible}.tabs{margin-left:0;width:100%}.tabs button{flex:1;padding:6px 4px}}
+@media (prefers-reduced-motion:reduce){.toast{transition:none}}
+</style>
+
+<header class="top">
+  <div><h1>卫星变轨实验室</h1><div class="sub">万有引力 · 开普勒轨道 · 宇宙速度 · 太空电梯</div></div>
+  <nav class="tabs" role="tablist">
+    <button data-tab="solar" class="on">太阳系 · 地球发射</button><button data-tab="custom">自定义星球</button><button data-tab="elev">太空电梯</button>
+  </nav>
+</header>
+
+<main class="wrap">
+  <section class="stage" id="stage">
+    <canvas id="cv" aria-label="轨道模拟画面"></canvas>
+    <div class="hud tl">
+      <button id="hPlay">暂停</button><button id="hDn" aria-label="减慢">«</button><span class="v" id="hWarp">×1000</span><button id="hUp" aria-label="加快">»</button><span class="clk" id="hClk"></span>
+    </div>
+    <div class="hud tr">
+      <select id="hView" aria-label="视角"></select><button id="zOut" aria-label="缩小">－</button><button id="zIn" aria-label="放大">＋</button>
+    </div>
+    <div class="toast" id="toast"></div>
+  </section>
+
+  <aside class="panel" id="pO">
+    <details open id="secPlanet" hidden><summary>星球参数</summary><div class="stack">
+      <label class="f"><span>预设</span><select id="pPre"></select></label>
+      <div class="g2">
+        <label class="f"><span>半径 R (km)</span><input id="pR" type="number" step="any"></label>
+        <label class="f"><span>密度 ρ (kg/m³)</span><input id="pRho" type="number" step="any"></label>
+        <label class="f"><span>质量 M (kg)</span><input id="pM" type="text" inputmode="decimal"></label>
+        <label class="f"><span>自转周期 (h)</span><input id="pRot" type="number" step="any"></label>
+      </div>
+      <button class="b wide" id="pApply">应用并清空飞行器</button>
+      <dl class="kv" id="pInfo"></dl>
+      <p class="small">近地（贴表面）卫星周期 T = √(3π / Gρ)，只取决于星球密度，与半径无关。</p>
+    </div></details>
+
+    <details open><summary>发射</summary><div class="stack">
+      <label class="f" id="lBodyF"><span>从哪个天体发射</span><select id="lBody"></select></label>
+      <dl class="kv" id="lInfo"></dl>
+      <div class="lab">发射高度</div><div class="chips" id="hChips"></div>
+      <div class="lab">发射速度（相对发射天体，水平方向）</div><div class="chips" id="vChips"></div>
+      <div class="g3">
+        <label class="f"><span>高度 km</span><input id="lAlt" type="number" step="any" value="0"></label>
+        <label class="f"><span>速度 km/s</span><input id="lV" type="number" step="any"></label>
+        <label class="f"><span>仰角 °</span><input id="lEl" type="number" value="0"></label>
+        <label class="f"><span>发射点方位 °</span><input id="lAz" type="number" value="90"></label>
+        <label class="f"><span>质量 kg</span><input id="lM" type="number" value="1000"></label>
+        <label class="f"><span>发动机推力 N</span><input id="lF" type="number" value="500"></label>
+      </div>
+      <label class="chk" id="lAutoF"><input type="checkbox" id="lAuto" checked><span>速度达到逃逸速度时，自动选发射点，让飞行器顺着行星公转方向飞出</span></label>
+      <button class="b hot wide" id="lGo">发射</button>
+    </div></details>
+
+    <details open><summary>飞行器</summary><div class="stack">
+      <div class="ships" id="ships"></div>
+      <div id="shipBox" class="stack">
+        <div class="note" id="hint"></div>
+        <dl class="kv" id="ro"></dl>
+        <div class="lab">点火时机</div>
+        <div class="seg" id="when"><button data-w="now" class="on">立即</button><button data-w="peri">下一个近点</button><button data-w="apo">下一个远点</button></div>
+        <div class="lab">脉冲点火 Δv（m/s）</div>
+        <div class="chips" id="dvChips"></div>
+        <input id="dv" type="number" value="500" aria-label="Δv">
+        <div class="btns"><button class="b hot" id="bPro">向前点火<br><small>加速</small></button><button class="b cold" id="bRet">向后点火<br><small>减速</small></button><button class="b" id="bCirc">圆化<br><small>变成圆轨道</small></button></div>
+        <div class="lab">持续点火 <span id="thrA"></span></div>
+        <div class="btns"><button class="b" id="tPro">持续向前</button><button class="b" id="tRet">持续向后</button><button class="b" id="tOff">熄火</button></div>
+        <div class="lab">霍曼转移：升轨 / 降轨（两次点火自动完成）</div>
+        <div class="g2"><label class="f"><span>目标圆轨道高度 km</span><input id="hoAlt" type="number" value="35786"></label><button class="b" id="hoGo" style="align-self:end">执行转移</button></div>
+        <p class="small" id="hoInfo"></p>
+        <div id="xfer" class="stack">
+          <div class="lab">地月 / 行星际转移（自动寻找点火时机）</div>
+          <div class="g2"><select id="xT"><option value="moon">去月球</option><option value="mars">去火星</option><option value="venus">去金星</option><option value="jupiter">去木星</option></select><button class="b" id="xGo">安排转移</button></div>
+          <label class="chk"><input type="checkbox" id="xCap" checked><span>到达后在近点自动减速入轨</span></label>
+          <p class="small" id="xInfo"></p>
+        </div>
+        <div id="evs"></div>
+        <button class="b" id="sDel">删除此飞行器</button>
+      </div>
+    </div></details>
+
+    <details open><summary>比较与追及</summary><div class="stack">
+      <div class="tw"><table id="cmp"></table></div>
+      <div id="pair" class="small"></div>
+      <p class="small">同一位置：椭圆轨道的近地点速度 &gt; 该处圆轨道速度 &gt; 远地点速度；而加速度 a = GM/r² 只与距离有关，与轨道形状无关。开普勒第三定律：a³/T² 对同一中心天体为定值。</p>
+    </div></details>
+
+    <details><summary>显示</summary><div class="stack">
+      <label class="chk"><input type="checkbox" id="oTrail" checked><span>轨迹</span></label>
+      <label class="chk"><input type="checkbox" id="oConic" checked><span>当前轨道（虚线）与近点、远点</span></label>
+      <label class="chk"><input type="checkbox" id="oCover"><span>信号覆盖范围与卫星间可见性</span></label>
+      <label class="chk" id="oSoiF"><input type="checkbox" id="oSoi"><span>引力影响范围（SOI）</span></label>
+      <label class="chk"><input type="checkbox" id="oPause"><span>选中飞行器到达近点 / 远点时自动暂停</span></label>
+      <button class="b" id="oClear">清除轨迹</button>
+    </div></details>
+  </aside>
+
+  <aside class="panel" id="pE" hidden>
+    <details open><summary>星球与绳索</summary><div class="stack">
+      <label class="f"><span>预设</span><select id="ePre"><option value="earth">地球</option><option value="mars">火星</option><option value="moon">月球</option><option value="fast">快速自转星球</option></select></label>
+      <div class="g3">
+        <label class="f"><span>质量 kg</span><input id="eM" type="text" inputmode="decimal"></label>
+        <label class="f"><span>半径 km</span><input id="eR" type="number" step="any"></label>
+        <label class="f"><span>自转周期 h</span><input id="eT" type="number" step="any"></label>
+      </div>
+      <label class="f"><span>绳索线密度 λ (kg/m)，均匀绳</span><input id="eLam" type="number" step="any" value="1"></label>
+      <button class="b wide" id="eApply">应用</button>
+      <dl class="kv" id="eInfo"></dl>
+    </div></details>
+    <details open><summary>配重与挂载</summary><div class="stack">
+      <label class="f"><span>配重高度 <b id="eRcV"></b></span><input type="range" id="eRc" min="0" max="1000" step="1"></label>
+      <div class="g2"><label class="f"><span>配重质量 (吨)</span><input id="eMc" type="number" step="any"></label><button class="b" id="eAuto" style="align-self:end">自动配平</button></div>
+      <label class="f"><span>电梯舱高度 <b id="eCarV"></b></span><input type="range" id="eCar" min="0" max="1000" step="1"></label>
+      <label class="f"><span>同步基站高度 <b id="eStnV"></b></span><input type="range" id="eStn" min="0" max="1000" step="1"></label>
+      <div class="g2"><label class="f"><span>电梯舱质量 (吨)</span><input id="eMe" type="number" value="20"></label><label class="f"><span>基站质量 (吨)</span><input id="eMs" type="number" value="100"></label></div>
+      <button class="b" id="eStnSync">基站回到同步高度</button>
+      <p class="small">在画面里可直接拖动电梯舱、基站和配重。</p>
+    </div></details>
+    <details open><summary>读数</summary><div class="stack">
+      <div class="seg" id="eSel"><button data-o="car" class="on">电梯舱</button><button data-o="stn">同步基站</button><button data-o="cw">配重</button></div>
+      <dl class="kv" id="eRo"></dl>
+      <div class="note" id="eAnchor"></div>
+    </div></details>
+    <details open><summary>沿绳分布</summary><canvas id="eChart"></canvas>
+      <p class="small">上图：每千克物体随绳转动时受到的合效果——等效重力 g效 = GM/r² − ω²r（纵轴为对数刻度，正值指向星球）。下图：绳中拉力，挂载处有跳变。</p></details>
+    <details open><summary>断裂实验</summary><div class="stack">
+      <button class="b hot wide" id="eBreak">钢绳瞬间解体</button>
+      <div id="eFate" class="note"></div>
+    </div></details>
+  </aside>
+</main>
+
+<script id="engine">
+// ================= 物理引擎（纯函数，无 DOM） =================
+const G=6.674e-11,DAY=86400,PI=Math.PI,TAU=2*PI,sq=Math.sqrt,hyp=Math.hypot;
+const wrap=a=>((a+PI)%TAU+TAU)%TAU-PI;
+const EPOCH=Date.UTC(2026,9,15), TJ=(EPOCH-Date.UTC(2000,0,1,12))/1000;
+const ETA=0.01;
+// id,名称,简称,GM,半径,颜色,轨道半径,J2000平黄经,自转周期(s)
+const EB=[['sun','太阳','日',1.32712e20,6.957e8,'#ffc94d'],
+['mercury','水星','水',2.2032e13,2.4397e6,'#a7a19a',5.7909e10,252.25,0],
+['venus','金星','金',3.24859e14,6.0518e6,'#e3c486',1.08209e11,181.98,0],
+['earth','地球','地',3.986004e14,6.371e6,'#3f8ee0',1.49598e11,100.46,86164.1],
+['moon','月球','月',4.9028e12,1.7374e6,'#c8c8c8',3.844e8,218.32,2360592],
+['mars','火星','火',4.2828e13,3.3895e6,'#d8643a',2.27939e11,355.43,88642.7],
+['jupiter','木星','木',1.26687e17,6.9911e7,'#d6b38c',7.7857e11,34.40,35730],
+['saturn','土星','土',3.7931e16,5.8232e7,'#e3cf8e',1.43353e12,49.94,38362],
+['uranus','天王星','天王',5.794e15,2.5362e7,'#9ad6de',2.87246e12,313.23,0],
+['neptune','海王星','海王',6.8351e15,2.4622e7,'#5b7fe0',4.49506e12,304.88,57996]];
+
+function solarWorld(){
+  const B=EB.map(([id,name,ch,mu,R,col,a,L0,rot])=>({id,name,ch,mu,R,col,a,L0,rot})),by={};
+  B.forEach(b=>by[b.id]=b);
+  const S=by.sun,E=by.earth,M=by.moon,fE=M.mu/(E.mu+M.mu);
+  for(const b of B){ if(!b.a){b.soi=Infinity;continue}
+    b.L0*=PI/180; b.par=b===M?E:S;
+    b.n=b===M?sq((E.mu+M.mu)/b.a**3):sq(S.mu/b.a**3);   // 由引力自洽地算角速度
+    b.soi=b.a*(b.mu/b.par.mu)**0.4; }
+  const circ=(o,T)=>{const th=o.L0+o.n*T,c=Math.cos(th),s=Math.sin(th);return [o.a*c,o.a*s,-o.a*o.n*s,o.a*o.n*c]};
+  // 地月质心绕日；地球、月球绕地月质心
+  const st=(b,t)=>{ if(b===S) return [0,0,0,0]; const T=t+TJ;
+    if(b===E||b===M){const e=circ(E,T),m=circ(M,T),f=b===E?-fE:1-fE;return [e[0]+f*m[0],e[1]+f*m[1],e[2]+f*m[2],e[3]+f*m[3]]}
+    return circ(b,T); };
+  const PL=B.filter(b=>b.a&&b!==M),EM=[S,E,M],ONE=[S],two={};
+  PL.forEach(p=>two[p.id]=[S,p]);
+  // 主天体 = 所处引力影响范围最小的天体；受力集合只取对该参考系有意义的天体
+  const env=(x,y,t)=>{ let p=st(M,t); if(hyp(x-p[0],y-p[1])<M.soi) return {prim:M,set:EM};
+    let near=null;
+    for(const b of PL){ p=st(b,t); const d=hyp(x-p[0],y-p[1]);
+      if(d<b.soi) return {prim:b,set:b===E?EM:two[b.id]};
+      if(d<3*b.soi){ near=near||[S]; if(b===E) near.push(E,M); else near.push(b); } }
+    return {prim:S,set:near||ONE}; };
+  return {kind:'solar',bodies:B,by,st,env};
+}
+function customWorld(R,rho,rotH){
+  const M=4/3*PI*R**3*rho,b={id:'planet',name:'星球',ch:'星',mu:G*M,M,R,rho,col:'#5fb39b',rot:rotH*3600,soi:Infinity},z=[0,0,0,0],E={prim:b,set:[b]};
+  return {kind:'custom',bodies:[b],by:{planet:b},st:()=>z,env:()=>E};
+}
+const syncR=b=>b.rot>0?Math.cbrt(b.mu*b.rot*b.rot/(4*PI*PI)):0;
+
+function acc(W,set,x,y,t,tx,ty){ let ax=tx,ay=ty;
+  for(const b of set){const p=W.st(b,t),dx=p[0]-x,dy=p[1]-y,r2=dx*dx+dy*dy,f=b.mu/(r2*sq(r2));ax+=f*dx;ay+=f*dy}
+  return [ax,ay]; }
+function rk4(W,s,set,h,tx,ty){
+  const {x,y,vx,vy,t}=s,h2=h/2;
+  const a1=acc(W,set,x,y,t,tx,ty);
+  const vx2=vx+a1[0]*h2,vy2=vy+a1[1]*h2,a2=acc(W,set,x+vx*h2,y+vy*h2,t+h2,tx,ty);
+  const vx3=vx+a2[0]*h2,vy3=vy+a2[1]*h2,a3=acc(W,set,x+vx2*h2,y+vy2*h2,t+h2,tx,ty);
+  const vx4=vx+a3[0]*h,vy4=vy+a3[1]*h,a4=acc(W,set,x+vx3*h,y+vy3*h,t+h,tx,ty);
+  s.x+=h/6*(vx+2*vx2+2*vx3+vx4); s.y+=h/6*(vy+2*vy2+2*vy3+vy4);
+  s.vx+=h/6*(a1[0]+2*a2[0]+2*a3[0]+a4[0]); s.vy+=h/6*(a1[1]+2*a2[1]+2*a3[1]+a4[1]); s.t+=h;
+}
+function stepInfo(W,s){ const E=W.env(s.x,s.y,s.t); let h=1e13;
+  for(const b of E.set){const p=W.st(b,s.t),d=hyp(s.x-p[0],s.y-p[1]);h=Math.min(h,ETA*sq(d*d*d/b.mu))}
+  if(s.thr){const P=W.st(E.prim,s.t);h=Math.min(h,0.005*Math.max(hyp(s.vx-P[2],s.vy-P[3]),50)/Math.abs(s.thr))}
+  return [h,E]; }
+// 自适应步长 RK4 积分到 tEnd；cb 返回 true 时提前停止
+function propagate(W,s,tEnd,maxN,cb){ let n=0;
+  while(s.t<tEnd&&n<maxN&&!s.dead){
+    let [h,E]=stepInfo(W,s),tx=0,ty=0;
+    if(s.thr){const P=W.st(E.prim,s.t),vx=s.vx-P[2],vy=s.vy-P[3],v=hyp(vx,vy)||1;tx=s.thr*vx/v;ty=s.thr*vy/v}
+    if(s.events) for(const ev of s.events) if(ev.t!=null&&ev.t>s.t) h=Math.min(h,ev.t-s.t);  // 定时点火精确落在步点上
+    h=Math.min(h,tEnd-s.t); if(!(h>0)) break;
+    rk4(W,s,E.set,h,tx,ty); n++;
+    if(s.thr) s.dv=(s.dv||0)+Math.abs(s.thr)*h;
+    for(const b of E.set){if(b===s.ghost)continue;const p=W.st(b,s.t),dx=s.x-p[0],dy=s.y-p[1],R=b.R*0.9998;
+      if(dx*dx+dy*dy<R*R){const d=hyp(dx,dy);s.dead=b;s.crash=[dx/d*b.R,dy/d*b.R];s.thr=0;break}}
+    if(cb&&cb(s,E.prim)) break;
+  }
+  return n; }
+// 相对主天体的密切轨道根数
+function elems(W,s){ if(s.dead) return null;
+  const b=W.env(s.x,s.y,s.t).prim,P=W.st(b,s.t),mu=b.mu;
+  const rx=s.x-P[0],ry=s.y-P[1],vx=s.vx-P[2],vy=s.vy-P[3],r=hyp(rx,ry),v=hyp(vx,vy),rv=rx*vx+ry*vy;
+  const h=rx*vy-ry*vx,en=v*v/2-mu/r,a=-mu/(2*en),k=v*v-mu/r,ex=(k*rx-rv*vx)/mu,ey=(k*ry-rv*vy)/mu,e=hyp(ex,ey),p=h*h/mu;
+  return {b,P,mu,rx,ry,vx,vy,r,v,h,en,a,e,ex,ey,p,rp:p/(1+e),ra:e<1?p/(1-e):Infinity,T:e<1?TAU*sq(a*a*a/mu):Infinity,vr:rv/r}; }
+// 沿速度方向（相对主天体）的脉冲点火，dv<0 为向后点火
+function burn(W,s,dv){ const P=W.st(W.env(s.x,s.y,s.t).prim,s.t),vx=s.vx-P[2],vy=s.vy-P[3],v=hyp(vx,vy)||1;
+  s.vx+=dv*vx/v; s.vy+=dv*vy/v; s.dv=(s.dv||0)+Math.abs(dv); }
+function circularize(W,s){ const el=elems(W,s),vc=sq(el.mu/el.r),sg=el.h>=0?1:-1;
+  const nx=-sg*vc*el.ry/el.r,ny=sg*vc*el.rx/el.r,d=hyp(nx-el.vx,ny-el.vy);
+  s.vx=el.P[2]+nx; s.vy=el.P[3]+ny; s.dv=(s.dv||0)+d; return d; }
+
+// ---- 转移规划：先用霍曼近似给出时机，再数值打靶修正 ----
+function minDist(W,q,tEnd,T){ let best=Infinity;
+  propagate(W,q,tEnd,4e5,q=>{const p=W.st(T,q.t),d=hyp(q.x-p[0],q.y-p[1]);if(d<best)best=d});
+  return best; }
+function optimize(f,g){ let best=null;
+  for(let i=0;i<g[0];i++)for(let j=0;j<g[1];j++){const p=[i/(g[0]-1),j/(g[1]-1)],c=f(p[0],p[1]);if(!best||c<best.c)best={p,c}}
+  const ev=p=>({p,c:f(p[0],p[1])}),b=best.p;
+  let S=[best,ev([b[0]+0.5/g[0],b[1]]),ev([b[0],b[1]+0.5/g[1]])];
+  for(let it=0;it<120;it++){ S.sort((a,b)=>a.c-b.c); const [B,M,X]=S,c=[(B.p[0]+M.p[0])/2,(B.p[1]+M.p[1])/2];
+    const at=k=>[c[0]+k*(X.p[0]-c[0]),c[1]+k*(X.p[1]-c[1])],r=ev(at(-1));
+    if(r.c<B.c){const e=ev(at(-2));S[2]=e.c<r.c?e:r}
+    else if(r.c<M.c) S[2]=r;
+    else{const k=ev(at(r.c<X.c?-0.5:0.5));
+      if(k.c<Math.min(X.c,r.c)) S[2]=k;
+      else{S[1]=ev([(B.p[0]+M.p[0])/2,(B.p[1]+M.p[1])/2]);S[2]=ev([(B.p[0]+X.p[0])/2,(B.p[1]+X.p[1])/2])}}
+    if(Math.max(hyp(S[1].p[0]-S[0].p[0],S[1].p[1]-S[0].p[1]),hyp(S[2].p[0]-S[0].p[0],S[2].p[1]-S[0].p[1]))<1e-7) break; }
+  S.sort((a,b)=>a.c-b.c); return S[0]; }
+function aim(W,q,o){
+  const base={x:q.x,y:q.y,vx:q.vx,vy:q.vy,t:q.t,thr:0},K=0.06;
+  const sim=(u,v)=>{const w=Math.max(0,Math.min(1,u))*o.wMax,s={...base};propagate(W,s,base.t+w,1e6);
+    if(s.dead) return [1e30,s];burn(W,s,o.dv0*(1+(v-0.5)*K));s.ghost=o.T;return [minDist(W,s,s.t+1.6*o.tof,o.T),s]};
+  const f=(u,v)=>Math.abs(sim(u,v)[0]-o.desired)+(u<0||u>1||v<0||v>1?1e13:0);
+  const r=optimize(f,[13,9]),w=Math.max(0,Math.min(1,r.p[0]))*o.wMax,dv=o.dv0*(1+(r.p[1]-0.5)*K),dmin=sim(r.p[0],r.p[1])[0];
+  q.events.push({label:`${o.name}：点火 Δv=${(dv/1e3).toFixed(3)} km/s`,t:base.t+w,run:s=>{burn(W,s,dv);o.note(`${s.name} ${o.name}点火（向前，Δv=${(dv/1e3).toFixed(3)} km/s），飞向${o.T.name}。`,true)}});
+  if(o.capture) q.events.push({label:`到达${o.T.name}后在近${o.T.ch}点减速入轨`,when:'peri',prim:o.T,run:s=>{const d=circularize(W,s);o.note(`${s.name} 在近${o.T.ch}点向后点火 Δv=${(d/1e3).toFixed(3)} km/s，被${o.T.name}捕获，进入环${o.T.name}圆轨道。`,true)}});
+  return {w,dv,dmin};
+}
+// 返回需加入 ship.events 的事件，或错误字符串
+function makeTransfer(W,s,tid,capture,note){
+  const B=W.by,E=B.earth,S=B.sun,M=B.moon,T=B[tid],el=elems(W,s);
+  if(!el||el.b!==E||el.e>0.05||el.h<=0) return '需先在绕地球的近圆轨道上运行（例如先发射到 400 km 圆轨道）。';
+  const r0=el.r,nS=sq(E.mu/r0**3),win=0.6,desired=T.R+(T===M?250e3:Math.max(400e3,0.3*T.R));
+  const fin=q=>{const r=aim(W,q,{dv0,wMax,tof,T,desired,capture,note,name:T===M?'地月转移':'地'+T.ch+'转移'});
+    note(`已算出点火方案：${(r.w/60).toFixed(1)} 分钟后向前点火 Δv=${(r.dv/1e3).toFixed(3)} km/s，预计飞行 ${(tof/DAY).toFixed(1)} 天，最近距离${T.name}中心 ${Math.round(r.dmin/1e3).toLocaleString()} km。`,true)};
+  let dv0,wMax,tof,ev;
+  if(T===M){
+    const rT=M.a,aT=(r0+rT)/2; tof=PI*sq(aT**3/E.mu); const th=PI-M.n*tof;
+    dv0=sq(E.mu/r0)*(sq(2*rT/(r0+rT))-1); wMax=win/(nS-M.n); let prev=null;
+    ev={label:`等待月球领先 ${(th*180/PI).toFixed(1)}° 的时机`,info:{th,dv0,tof},test:q=>{const e=W.st(E,q.t),m=W.st(M,q.t);
+      const phi=wrap(Math.atan2(m[1]-e[1],m[0]-e[0])-Math.atan2(q.y-e[1],q.x-e[0])-th-win/2),hit=prev!==null&&prev>0&&phi<=0&&phi>-1;prev=phi;return hit},run:fin};
+  } else {
+    const r1=E.a,r2=T.a,aT=(r1+r2)/2; tof=PI*sq(aT**3/S.mu); const th=PI-T.n*tof;
+    const vinf=Math.abs(sq(S.mu/r1)*(sq(2*r2/(r1+r2))-1)),nu=Math.acos(-1/(1+r0*vinf*vinf/E.mu)),out=r2>r1?0:PI;
+    dv0=sq(vinf*vinf+2*E.mu/r0)-sq(E.mu/r0); wMax=win/nS; let stage=0,prev=null;
+    ev={label:`等待${T.name}领先地球 ${(th*180/PI).toFixed(1)}° 的发射窗口`,info:{th,dv0,tof,vinf},test:q=>{const e=W.st(E,q.t);
+      if(stage===0){const p=W.st(T,q.t),phi=wrap(Math.atan2(p[1],p[0])-Math.atan2(e[1],e[0])-th),hit=prev!==null&&prev*phi<=0&&Math.abs(phi)<0.5;prev=phi;
+        if(hit){stage=1;prev=null;ev.label='窗口已到，等待飞到点火位置';note(`${T.name}发射窗口已到，等飞行器绕到合适位置后点火。`,true)}return false}
+      const ba=Math.atan2(e[3],e[2])+out-nu-win/2,phi=wrap(Math.atan2(q.y-e[1],q.x-e[0])-ba),hit=prev!==null&&prev<0&&phi>=0&&phi<1;prev=phi;return hit},run:fin};
+  }
+  return ev;
+}
+// 太空电梯：均匀绳 + 顶端配重 + 若干挂载
+function elevStat(e){ const mu=G*e.M,w=TAU/e.T,rs=Math.cbrt(mu/(w*w)),ge=r=>mu/(r*r)-w*w*r;
+  const I=(x,rc)=>mu*(1/x-1/rc)-w*w*(rc*rc-x*x)/2;
+  const tension=x=>{let T=-e.mc*ge(e.rc)-e.lam*I(x,e.rc);for(const o of e.att) if(o.r>x&&o.r<=e.rc) T-=o.m*ge(o.r);return T};
+  return {mu,w,rs,ge,I,tension}; }
+</script>
+
+<script>
+// ================= 界面 =================
+const $=id=>document.getElementById(id);
+const WARPS=[1,10,100,1e3,1e4,1e5,1e6,1e7],BUDGET=8000,COLS=['#ff9b54','#5ec8f2','#f27eb5','#b49cff','#f5d04e','#6fe0b0','#ff7a6b','#9fd3ff'];
+const deg=x=>(x*180/PI);
+const fd=m=>{m=Math.abs(m);if(!isFinite(m))return '∞';if(m<1e5)return (m/1e3).toFixed(1)+' km';if(m<1e9)return Math.round(m/1e3).toLocaleString('en-US')+' km';return (m/1.495978707e11).toFixed(3)+' AU'};
+const fv=v=>Math.abs(v)<1000?v.toFixed(1)+' m/s':(v/1e3).toFixed(3)+' km/s';
+const ft=s=>{if(!isFinite(s))return '∞';s=Math.abs(s);if(s<120)return s.toFixed(1)+' s';if(s<7200)return (s/60).toFixed(1)+' 分';if(s<2*DAY)return (s/3600).toFixed(2)+' 时';if(s<730*DAY)return (s/DAY).toFixed(2)+' 天';return (s/DAY/365.25).toFixed(2)+' 年'};
+const fa=a=>(Math.abs(a)>=0.01||a===0?a.toPrecision(4):a.toExponential(2))+' m/s²';
+const fN=n=>{const a=Math.abs(n);return a<1e3?n.toFixed(0)+' N':a<1e6?(n/1e3).toFixed(2)+' kN':a<1e9?(n/1e6).toFixed(2)+' MN':(n/1e9).toFixed(2)+' GN'};
+const apn=(b,k)=>(k==='apo'?'远':'近')+b.ch+'点';
+const fe=x=>{const s=x.toExponential(3).split('e');return s[0]+'×10^'+(+s[1])};
+
+let toastT=0,lastNote=0;
+function note(msg,force){const n=performance.now();if(!force&&n-lastNote<1400)return;lastNote=n;const t=$('toast');t.textContent=msg;t.classList.add('on');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('on'),force?5200:3200)}
+
+class Sim{
+  constructor(kind,W){Object.assign(this,{kind,W,t:0,wi:3,paused:false,ships:[],sel:null,seq:0,eff:1,
+    view:{c:kind==='solar'?'earth':'planet',S:4e4,px:0,py:0},opts:{trail:true,conic:true,cover:false,soi:false,pause:false}})}
+  update(dt){ if(this.paused) return; let T=WARPS[this.wi]*dt; const live=this.ships.filter(s=>!s.dead);
+    let est=0; for(const s of live) est+=T/stepInfo(this.W,s)[0];
+    if(est>BUDGET) T*=BUDGET/est; this.eff=T/dt;
+    const tEnd=this.t+T;
+    for(const s of live){ propagate(this.W,s,tEnd,BUDGET*3,(q,p)=>this.onStep(q,p)); if(this.paused){this.t=s.t;return} }
+    this.t=tEnd; }
+  onStep(s,prim){ const W=this.W,P=W.st(prim,s.t),rx=s.x-P[0],ry=s.y-P[1],vr=rx*(s.vx-P[2])+ry*(s.vy-P[3]);
+    let aps=null,stop=false;
+    if(s.dead){ if(s===this.sel||true) note(`${s.name} 撞上了${s.dead.name}表面。`,true); }
+    if(s.lp!==prim){ if(s.lp&&!s.dead) note(`${s.name} 进入${prim.name}的引力影响范围${prim.id==='sun'?'，开始绕太阳运动':''}。`,true); s.lp=prim; }
+    else if(s.lvr>0&&vr<=0) aps='apo'; else if(s.lvr<0&&vr>=0) aps='peri';
+    s.lvr=vr;
+    for(const ev of [...s.events]){ let fire=false;
+      if(ev.when) fire=aps===ev.when&&(!ev.prim||ev.prim===prim);
+      else if(ev.t!=null) fire=s.t>=ev.t-1e-6; else if(ev.test) fire=ev.test(s);
+      if(fire){ s.events.splice(s.events.indexOf(ev),1); ev.run(s); evDirty=true; } }
+    if(aps&&s===this.sel&&!s.dead){ const el=elems(W,s);
+      if(el&&el.e>0.01){ const nm=apn(prim,aps),msg=`${s.name} 到达${nm}：高度 ${fd(el.r-prim.R)}，速度 ${fv(el.v)}。`+(aps==='apo'?`在此向前点火可抬高${apn(prim,'peri')}（升轨、圆化）。`:`在此向后点火可降低${apn(prim,'apo')}（降轨）。`);
+        if(this.opts.pause){this.paused=true;stop=true;note(msg,true)} else note(msg); } }
+    const L=s.trail[s.trail.length-1];
+    if(!L) s.trail.push([s.x,s.y,s.t]);
+    else{ const Q=W.st(prim,L[2]),dx=rx-(L[0]-Q[0]),dy=ry-(L[1]-Q[1]),lim=0.012*hyp(rx,ry);
+      if(dx*dx+dy*dy>lim*lim||s.dead){ s.trail.push([s.x,s.y,s.t]); if(s.trail.length>4500) s.trail.splice(0,500); } }
+    return stop; }
+  launch(o){ const W=this.W,b=o.body,P=W.st(b,this.t),r=b.R+o.alt,mu=b.mu;
+    let az=o.az*PI/180;
+    if(o.auto&&b.par&&!o.el&&o.v*o.v>=2*mu/r*0.999){ const Q=W.st(b.par,this.t),vi=Math.max(0,o.v*o.v-2*mu/r),nu=Math.acos(-1/(1+r*vi/mu));
+      az=Math.atan2(P[3]-Q[3],P[2]-Q[2])-nu; }
+    const g=o.el*PI/180,c=Math.cos(az),sn=Math.sin(az),ct=Math.cos(g),stg=Math.sin(g);
+    const id=this.seq++,s={id,name:'卫星'+String.fromCharCode(65+id%26)+(id>=26?Math.floor(id/26):''),col:COLS[id%COLS.length],
+      x:P[0]+r*c,y:P[1]+r*sn,vx:P[2]+o.v*(-sn*ct+c*stg),vy:P[3]+o.v*(c*ct+sn*stg),t:this.t,thr:0,dir:0,mass:o.mass,F:o.F,dv:0,trail:[],events:[],lp:null,lvr:0,born:b};
+    this.ships.push(s); this.sel=s; return s; }
+}
+
+// ---------- 世界与预设 ----------
+const PPRE={demo:['示例星球',3000,5500,20],earth:['地球',6371,5514,23.934],moon:['月球',1737.4,3344,655.72],mars:['火星',3389.5,3933,24.623],jup:['木星',69911,1326,9.925],ast:['小行星（半径10 km）',10,2000,5]};
+const SOL=new Sim('solar',solarWorld());
+let CUST=new Sim('custom',customWorld(3e6,5500,20));
+let tab='solar';
+const cur=()=>tab==='custom'?CUST:SOL;
+
+// ---------- 画布 ----------
+const cv=$('cv'),ctx=cv.getContext('2d');let CW=1,CH=1,DPR=1;
+function resize(){const r=cv.getBoundingClientRect();DPR=Math.min(2,devicePixelRatio||1);CW=Math.max(1,r.width);CH=Math.max(1,r.height);cv.width=CW*DPR;cv.height=CH*DPR}
+new ResizeObserver(resize).observe($('stage'));resize();
+const STARS=Array.from({length:260},()=>[Math.random(),Math.random(),Math.random()]);
+function bgStars(){ctx.setTransform(DPR,0,0,DPR,0,0);ctx.fillStyle='#060a14';ctx.fillRect(0,0,CW,CH);
+  for(const [x,y,m] of STARS){ctx.fillStyle=`rgba(200,215,255,${0.15+m*0.5})`;ctx.fillRect(x*CW,y*CH,m>0.9?1.6:1,m>0.9?1.6:1)}}
+const fitS=r=>r/(0.42*Math.min(CW,CH));
+
+function centerOf(S){ const W=S.W,c=S.view.c;
+  if(c==='ship'&&S.sel){ const s=S.sel;
+    if(s.dead) return t=>{const p=W.st(s.dead,t);return [p[0]+s.crash[0],p[1]+s.crash[1]]};
+    const b=W.env(s.x,s.y,s.t).prim,p=W.st(b,s.t),ox=s.x-p[0],oy=s.y-p[1];return t=>{const q=W.st(b,t);return [q[0]+ox,q[1]+oy]} }
+  const b=W.by[c]||W.bodies[0]; return t=>W.st(b,t); }
+function shipPos(W,s){ if(s.dead){const p=W.st(s.dead,s.t);return [p[0]+s.crash[0],p[1]+s.crash[1]]} return [s.x,s.y]; }
+
+function drawBody(b,x,y,rad,lx,ly){
+  if(b.id==='sun'){const g=ctx.createRadialGradient(x,y,rad*0.2,x,y,rad*3.2);g.addColorStop(0,'rgba(255,214,110,.55)');g.addColorStop(1,'rgba(255,170,60,0)');ctx.fillStyle=g;ctx.beginPath();ctx.arc(x,y,rad*3.2,0,TAU);ctx.fill()}
+  const g=ctx.createRadialGradient(x+lx*rad*0.45,y+ly*rad*0.45,rad*0.1,x,y,rad);
+  g.addColorStop(0,b.id==='sun'?'#fff3c4':b.col);g.addColorStop(1,b.id==='sun'?'#f5a623':shade(b.col));
+  ctx.fillStyle=g;ctx.beginPath();ctx.arc(x,y,rad,0,TAU);ctx.fill();
+  if(b.id==='saturn'&&rad>3){ctx.strokeStyle='rgba(227,207,142,.55)';ctx.lineWidth=Math.max(1,rad*0.18);ctx.beginPath();ctx.ellipse(x,y,rad*2.1,rad*0.6,-0.4,0,TAU);ctx.stroke()}
+}
+function shade(h){const n=parseInt(h.slice(1),16);return `rgb(${(n>>16)*0.28|0},${(n>>8&255)*0.28|0},${(n&255)*0.32|0})`}
+function scaleBar(sc){ const raw=110*sc,p=10**Math.floor(Math.log10(raw)),m=raw/p,L=(m>=5?5:m>=2?2:1)*p,px=L/sc;
+  ctx.strokeStyle='rgba(220,230,250,.7)';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(14,CH-16);ctx.lineTo(14+px,CH-16);ctx.moveTo(14,CH-20);ctx.lineTo(14,CH-12);ctx.moveTo(14+px,CH-20);ctx.lineTo(14+px,CH-12);ctx.stroke();
+  ctx.fillStyle='rgba(220,230,250,.8)';ctx.font='11px "IBM Plex Mono",monospace';ctx.textAlign='left';ctx.fillText(fd(L),14,CH-24); }
+
+function drawSim(S){
+  const W=S.W,v=S.view,C=centerOf(S),cx=CW/2+v.px,cy=CH/2+v.py,sc=v.S,t=S.t;
+  const P=(x,y,tt)=>{const c=C(tt);return [cx+(x-c[0])/sc,cy-(y-c[1])/sc]};
+  bgStars(); ctx.lineCap='round';
+  // 天体轨道
+  if(S.kind==='solar') for(const b of W.bodies){ if(!b.a) continue; const c=W.st(b===W.by.moon?W.by.earth:b.par,t),[x,y]=P(c[0],c[1],t),rr=b.a/sc;
+    if(rr<8||rr>2e4) continue; ctx.strokeStyle=b.id==='moon'?'rgba(200,205,215,.25)':'rgba(130,155,205,.2)';ctx.lineWidth=1;ctx.beginPath();ctx.arc(x,y,rr,0,TAU);ctx.stroke(); }
+  if(S.opts.soi) for(const b of W.bodies){ if(!isFinite(b.soi)) continue; const p=W.st(b,t),[x,y]=P(p[0],p[1],t),rr=b.soi/sc; if(rr<10||rr>3e5) continue;
+    ctx.setLineDash([3,6]);ctx.strokeStyle='rgba(160,200,255,.35)';ctx.beginPath();ctx.arc(x,y,rr,0,TAU);ctx.stroke();ctx.setLineDash([]);
+    ctx.fillStyle='rgba(160,200,255,.6)';ctx.font='11px "Noto Sans SC",sans-serif';ctx.textAlign='center';ctx.fillText(b.name+'引力影响范围',x,y-rr-4); }
+  // 天体
+  for(const b of W.bodies){ const p=W.st(b,t),[x,y]=P(p[0],p[1],t),rad=Math.max(b.R/sc,b.id==='sun'?5:b.id==='moon'?2:3);
+    if(x<-rad-80||x>CW+rad+80||y<-rad-80||y>CH+rad+80) continue;
+    let lx=-0.6,ly=-0.6; if(S.kind==='solar'&&b.id!=='sun'){const d=hyp(p[0],p[1]);lx=-p[0]/d;ly=p[1]/d}
+    drawBody(b,x,y,rad,lx,ly);
+    if(b.rot>0&&rad>12&&S.kind==='custom'){const a=TAU*t/b.rot;ctx.strokeStyle='rgba(255,255,255,.35)';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+Math.cos(a)*rad,y-Math.sin(a)*rad);ctx.stroke()}
+    if(rad<40){ctx.fillStyle='rgba(225,232,245,.85)';ctx.font='12px "Noto Sans SC",sans-serif';ctx.textAlign='left';ctx.fillText(b.name,x+rad+5,y-rad-2)} }
+  const live=S.ships.map(s=>({s,el:elems(W,s)}));
+  // 轨迹
+  if(S.opts.trail) for(const {s} of live){ if(s.trail.length<2) continue; ctx.strokeStyle=s.col;ctx.globalAlpha=0.7;ctx.lineWidth=1.4;ctx.beginPath();let pen=false;
+    const pts=s.trail.concat([[...shipPos(W,s),s.t]]);
+    for(const q of pts){const [x,y]=P(q[0],q[1],q[2]);if(Math.abs(x)>4e4||Math.abs(y)>4e4){pen=false;continue}if(pen)ctx.lineTo(x,y);else{ctx.moveTo(x,y);pen=true}}
+    ctx.stroke();ctx.globalAlpha=1; }
+  // 密切轨道
+  if(S.opts.conic) for(const {s,el} of live){ if(!el) continue; const n=240,om=el.e>1e-6?Math.atan2(el.ey,el.ex):0,nmax=el.e<1?PI:Math.acos(-1/el.e)-0.02,lim=el.e<1?Infinity:60*el.rp;
+    ctx.strokeStyle=s.col;ctx.globalAlpha=s===S.sel?0.85:0.45;ctx.setLineDash([5,5]);ctx.lineWidth=1.2;ctx.beginPath();let pen=false;
+    for(let i=0;i<=n;i++){const nu=-nmax+2*nmax*i/n,r=el.p/(1+el.e*Math.cos(nu));if(r>lim||r<0){pen=false;continue}
+      const [x,y]=P(el.P[0]+r*Math.cos(om+nu),el.P[1]+r*Math.sin(om+nu),s.t);if(Math.abs(x)>4e4||Math.abs(y)>4e4){pen=false;continue}pen?ctx.lineTo(x,y):(ctx.moveTo(x,y),pen=true)}
+    ctx.stroke();ctx.setLineDash([]);ctx.globalAlpha=1;
+    if(el.e>0.01&&el.rp*(1+el.e)/sc>18){ const mk=(r,a,k)=>{const [x,y]=P(el.P[0]+r*Math.cos(a),el.P[1]+r*Math.sin(a),s.t);ctx.fillStyle=s.col;ctx.beginPath();ctx.arc(x,y,3.5,0,TAU);ctx.fill();
+        ctx.fillStyle='rgba(235,240,250,.9)';ctx.font='11px "Noto Sans SC",sans-serif';ctx.textAlign='center';ctx.fillText(apn(el.b,k),x,y-8)};
+      mk(el.rp,om,'peri'); if(el.e<1) mk(el.ra,om+PI,'apo'); } }
+  // 信号覆盖
+  if(S.opts.cover){ for(const {s,el} of live){ if(!el||el.b.id==='sun'||el.r<=el.b.R) continue; const al=Math.acos(el.b.R/el.r),th=Math.atan2(el.ry,el.rx),R=el.b.R;
+      const [sx,sy]=P(s.x,s.y,s.t),t1=P(el.P[0]+R*Math.cos(th+al),el.P[1]+R*Math.sin(th+al),s.t),t2=P(el.P[0]+R*Math.cos(th-al),el.P[1]+R*Math.sin(th-al),s.t),[bx,by]=P(el.P[0],el.P[1],s.t);
+      ctx.fillStyle=s.col;ctx.globalAlpha=0.1;ctx.beginPath();ctx.moveTo(sx,sy);ctx.lineTo(t1[0],t1[1]);ctx.lineTo(t2[0],t2[1]);ctx.fill();ctx.globalAlpha=0.6;ctx.strokeStyle=s.col;ctx.lineWidth=1;
+      ctx.beginPath();ctx.moveTo(t1[0],t1[1]);ctx.lineTo(sx,sy);ctx.lineTo(t2[0],t2[1]);ctx.stroke();ctx.globalAlpha=1;ctx.lineWidth=4;ctx.beginPath();ctx.arc(bx,by,R/sc,-(th+al),-(th-al));ctx.stroke(); }
+    for(let i=0;i<live.length;i++)for(let j=i+1;j<live.length;j++){ const A=live[i],B=live[j]; if(!A.el||!B.el||A.el.b!==B.el.b||A.el.b.id==='sun') continue;
+      const ax=A.el.rx,ay=A.el.ry,dx=B.el.rx-ax,dy=B.el.ry-ay,u=Math.max(0,Math.min(1,-(ax*dx+ay*dy)/(dx*dx+dy*dy))),blk=hyp(ax+u*dx,ay+u*dy)<A.el.b.R;
+      const [x1,y1]=P(A.s.x,A.s.y,A.s.t),[x2,y2]=P(B.s.x,B.s.y,B.s.t);ctx.strokeStyle=blk?'rgba(255,110,100,.7)':'rgba(120,230,170,.8)';ctx.lineWidth=1.2;ctx.setLineDash(blk?[3,4]:[]);
+      ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();ctx.setLineDash([]); } }
+  // 飞行器
+  S.hits=[];
+  for(const {s,el} of live){ const [wx,wy]=shipPos(W,s),[x,y]=P(wx,wy,s.t); S.hits.push([s,x,y]);
+    ctx.save();ctx.translate(x,y);
+    if(s.dead){ctx.strokeStyle=s.col;ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(-5,-5);ctx.lineTo(5,5);ctx.moveTo(5,-5);ctx.lineTo(-5,5);ctx.stroke()}
+    else{ ctx.rotate(Math.atan2(-el.vy,el.vx));
+      if(s.dir){const fx=s.dir>0?-7:8,fl=s.dir>0?-1:1;ctx.fillStyle='rgba(255,170,70,.95)';ctx.beginPath();ctx.moveTo(fx,-3);ctx.lineTo(fx+fl*(9+Math.random()*5),0);ctx.lineTo(fx,3);ctx.fill()}
+      ctx.fillStyle=s.col;ctx.beginPath();ctx.moveTo(8,0);ctx.lineTo(-6,5);ctx.lineTo(-3,0);ctx.lineTo(-6,-5);ctx.closePath();ctx.fill(); }
+    ctx.restore();
+    if(s===S.sel){ctx.strokeStyle='rgba(255,255,255,.75)';ctx.lineWidth=1;ctx.beginPath();ctx.arc(x,y,12,0,TAU);ctx.stroke()}
+    ctx.fillStyle=s.col;ctx.font='500 12px "Noto Sans SC",sans-serif';ctx.textAlign='left';ctx.fillText(s.name,x+13,y+4); }
+  scaleBar(sc);
+}
+
+// ---------- 发射面板 ----------
+let vSel=1;
+function lBody(){const S=cur();return S.W.by[$('lBody').value]||S.W.bodies.find(b=>b.id!=='sun')}
+function fillBodies(){const S=cur();$('lBody').innerHTML=S.W.bodies.filter(b=>b.id!=='sun').map(b=>`<option value="${b.id}">${b.name}</option>`).join('');
+  if(S.kind==='solar')$('lBody').value='earth';$('lBodyF').hidden=$('lAutoF').hidden=S.kind!=='solar';refreshLaunch(true)}
+function vChoices(b){ const mu=b.mu,R=b.R,r=R+(+$('lAlt').value||0)*1e3,v1=sq(mu/R),v2=sq(2*mu/R),vc=sq(mu/r),ve=sq(2*mu/r),h=r-R>1;
+  const L=h?[['0.8 v圆',0.8*vc],['v圆 = √(GM/r)',vc],['1.15 v圆 椭圆',1.15*vc],['1.3 v圆',1.3*vc],['当地逃逸速度',ve]]:[['0.8 v₁ 落回',0.8*v1],['v₁ 第一宇宙速度',v1],['1.15 v₁ 椭圆',1.15*v1],['1.3 v₁',1.3*v1],['v₂ 第二宇宙速度',v2]];
+  if(b.par&&b.par.id==='sun'){const vi=(Math.SQRT2-1)*b.a*b.n;L.push(['v₃ 第三宇宙速度',sq(vi*vi+ve*ve)])}
+  return L; }
+function refreshLaunch(resetAlt){ const b=lBody(),mu=b.mu,R=b.R,rs=syncR(b);
+  const hs=b.id==='earth'?[['地面',0],['近地轨道',400],['GPS 轨道',20200],['同步轨道',35786]]:[['地面',0],['0.1R',R/1e4],['1R',R/1e3]];
+  if(b.id!=='earth'&&rs>R&&rs<b.soi) hs.push(['同步轨道',(rs-R)/1e3]);
+  if(resetAlt) $('lAlt').value=0;
+  $('hChips').innerHTML=hs.map(([n,h])=>`<button class="chip${Math.abs(+$('lAlt').value-h)<1e-6?' on':''}" data-h="${h}">${n}<small>${h?Math.round(h).toLocaleString()+' km':''}</small></button>`).join('');
+  const vs=vChoices(b); if(vSel>=vs.length) vSel=1;
+  $('vChips').innerHTML=vs.map(([n,v],i)=>`<button class="chip${i===vSel?' on':''}" data-i="${i}">${n}<small>${(v/1e3).toFixed(2)}</small></button>`).join('');
+  if(vSel>=0) $('lV').value=(vs[vSel][1]/1e3).toFixed(3);
+  const v1=sq(mu/R),v3=vs.find(x=>x[0].startsWith('v₃'));
+  $('lInfo').innerHTML=`<dt>表面重力加速度 g</dt><dd>${fa(mu/R/R)}</dd><dt>第一宇宙速度 v₁</dt><dd>${fv(v1)}</dd><dt>第二宇宙速度 v₂ = √2·v₁</dt><dd>${fv(sq(2)*v1)}</dd>`+(v3&&!(+$('lAlt').value)?`<dt>第三宇宙速度 v₃</dt><dd>${fv(v3[1])}</dd>`:'')+(rs>R?`<dt>同步轨道高度</dt><dd>${fd(rs-R)}</dd>`:''); }
+$('hChips').onclick=e=>{const c=e.target.closest('.chip');if(!c)return;$('lAlt').value=+(+c.dataset.h).toFixed(3);refreshLaunch()};
+$('vChips').onclick=e=>{const c=e.target.closest('.chip');if(!c)return;vSel=+c.dataset.i;refreshLaunch()};
+$('lAlt').oninput=()=>refreshLaunch();$('lV').oninput=()=>{vSel=-1;$$('#vChips .chip').forEach(c=>c.classList.remove('on'))};
+$('lBody').onchange=()=>{vSel=1;refreshLaunch(true)};
+const $$=q=>[...document.querySelectorAll(q)];
+function doLaunch(){ const S=cur(),b=lBody(),v=(+$('lV').value)*1e3;if(!(v>=0))return note('请输入发射速度',true);
+  const s=S.launch({body:b,alt:Math.max(0,+$('lAlt').value||0)*1e3,v,el:+$('lEl').value||0,az:+$('lAz').value||0,auto:$('lAuto').checked,mass:Math.max(1,+$('lM').value||1000),F:Math.max(0,+$('lF').value||0)});
+  const el=elems(S.W,s); S.view.c=b.id;S.view.px=S.view.py=0;S.view.S=fitS(el.e<0.97?Math.min(el.ra,b.R*60)*1.05:b.R*14);syncView();
+  S.paused=false; renderShips(); note(hintFor(S,s,el),true); }
+$('lGo').onclick=doLaunch;
+
+// ---------- 飞行器面板 ----------
+let when='now',evDirty=true,evKey='';
+function renderShips(){ const S=cur();$('ships').innerHTML=S.ships.map(s=>`<button class="ship${s===S.sel?' on':''}${s.dead?' dead':''}" data-id="${s.id}"><i style="background:${s.col}"></i>${s.name}</button>`).join('')||'<span class="small">还没有飞行器，先在上方发射一个。</span>';
+  $('shipBox').hidden=!S.sel; evDirty=true; }
+$('ships').onclick=e=>{const b=e.target.closest('.ship');if(!b)return;const S=cur();S.sel=S.ships.find(s=>s.id==+b.dataset.id);renderShips()};
+$('when').onclick=e=>{const b=e.target.closest('button');if(!b)return;when=b.dataset.w;$$('#when button').forEach(x=>x.classList.toggle('on',x===b))};
+$('dvChips').innerHTML=[10,50,100,300,500,1000,3000].map(v=>`<button class="chip" data-v="${v}">${v}</button>`).join('');
+$('dvChips').onclick=e=>{const c=e.target.closest('.chip');if(c)$('dv').value=c.dataset.v};
+function selShip(){const S=cur(),s=S.sel;if(!s)return null;if(s.dead){note(`${s.name} 已坠毁。`,true);return null}return s}
+function plan(label,run){ const S=cur(),s=selShip();if(!s)return;const el=elems(S.W,s);
+  if(when==='now'){run(s);return}
+  if(when==='apo'&&el.e>=1) return note('双曲线（逃逸）轨道没有远点。',true);
+  const nm=apn(el.b,when);s.events.push({label:`下一个${nm}：${label}`,when,prim:el.b,run:q=>{run(q);}});evDirty=true;note(`已计划：到达下一个${nm}时${label}。`,true); }
+function pulse(sign){ const S=cur(),dv=Math.abs(+$('dv').value||0)*sign;
+  plan(`${sign>0?'向前':'向后'}点火 ${Math.abs(dv)} m/s`,s=>{burn(S.W,s,dv);const el=elems(S.W,s);note(`${s.name} ${sign>0?'向前点火（加速）':'向后点火（减速）'} Δv=${fv(Math.abs(dv))}。`+hintFor(S,s,el),true)}); }
+$('bPro').onclick=()=>pulse(1);$('bRet').onclick=()=>pulse(-1);
+$('bCirc').onclick=()=>{const S=cur();plan('圆化',s=>{const before=elems(S.W,s),d=circularize(S.W,s),el=elems(S.W,s);
+  const dir=el.v>before.v+1e-6?'向前':'向后';note(`${s.name} 圆化：${dir}点火 Δv=${fv(d)}，现在是半径 ${fd(el.r)} 的圆轨道，v = √(GM/r) = ${fv(el.v)}。`,true)})};
+function thrust(d){const s=selShip();if(!s)return;s.dir=d;s.thr=d*s.F/s.mass;$('tPro').classList.toggle('on',d>0);$('tRet').classList.toggle('on',d<0);
+  if(d) note(d>0?'持续向前加速：轨道一圈圈螺旋扩大，速度达到当地逃逸速度后将脱离中心天体。':'持续向后减速：轨道螺旋缩小，最终坠向中心天体。',true)}
+$('tPro').onclick=()=>thrust(1);$('tRet').onclick=()=>thrust(-1);$('tOff').onclick=()=>thrust(0);
+$('hoGo').onclick=()=>{ const S=cur(),s=selShip();if(!s)return;const el=elems(S.W,s);
+  if(el.e>0.05||el.h<=0) return note('霍曼转移要从近圆轨道出发：可先点“圆化”。',true);
+  const r1=el.r,r2=el.b.R+(+$('hoAlt').value)*1e3;if(r2<=el.b.R*1.0005)return note('目标高度必须在星球表面以上。',true);
+  const vt=sq(el.mu*(2/r1-2/(r1+r2))),dv1=vt-el.v,up=r2>r1,nm=apn(el.b,up?'apo':'peri');
+  burn(S.W,s,dv1); s.events.push({label:`霍曼第二次点火：在${nm}圆化`,when:up?'apo':'peri',prim:el.b,run:q=>{const d=circularize(S.W,q);note(`${q.name} 在${nm}${up?'向前':'向后'}点火 Δv=${fv(d)}，进入高度 ${fd(elems(S.W,q).r-el.b.R)} 的圆轨道。`,true)}});
+  evDirty=true; note(`第一次点火：${up?'向前':'向后'} Δv=${fv(Math.abs(dv1))}，进入转移椭圆（此处是${apn(el.b,up?'peri':'apo')}），${ft(PI*sq(((r1+r2)/2)**3/el.mu))} 后到达${nm}。`,true); };
+$('xGo').onclick=()=>{ const S=cur(),s=selShip();if(!s)return;const r=makeTransfer(S.W,s,$('xT').value,$('xCap').checked,note);
+  if(typeof r==='string') return note(r,true); s.events=s.events.filter(e=>!e.info); s.events.push(r); evDirty=true;
+  if(S.wi<4) S.wi=4; note(`已安排${$('xT').selectedOptions[0].text}：${r.label}。可调高时间倍速等待。`,true); };
+$('sDel').onclick=()=>{const S=cur();S.ships=S.ships.filter(s=>s!==S.sel);S.sel=S.ships[S.ships.length-1]||null;renderShips()};
+$('evs').onclick=e=>{const b=e.target.closest('button');if(!b)return;const s=cur().sel;s.events.splice(+b.dataset.i,1);evDirty=true};
+
+function hintFor(S,s,el){ if(s.dead) return `${s.name} 已撞上${s.dead.name}。`; const b=el.b,P=b.name,c=b.ch,mu=el.mu,ve=sq(2*mu/el.r);
+  if(s.dir) return s.dir>0?`持续向前加速：轨道一圈圈变大；当速度达到当地逃逸速度 ${fv(ve)} 时将脱离${P}。`:`持续向后减速：轨道不断降低，最终坠入${P}。`;
+  if(el.e>=1) return `速度 ${fv(el.v)} ≥ 当地逃逸速度 ${fv(ve)}，比机械能 ε ≥ 0，是${el.e>1.0001?'双曲线':'抛物线'}轨道：飞行器将脱离${P}的束缚。`;
+  if(el.rp<b.R) return `近${c}点在${P}表面以下：这条椭圆会撞上${P}（速度不足）。向前点火可抬高近${c}点。`;
+  if(el.e<0.01) return `圆轨道：v = √(GM/r) = ${fv(el.v)}，周期 ${ft(el.T)}。<b>向前点火</b>→进入椭圆，此处成为近${c}点；<b>向后点火</b>→此处成为远${c}点。`;
+  const va=sq(mu*(2/el.ra-1/el.a)),vp=sq(mu*(2/el.rp-1/el.a)),vca=sq(mu/el.ra),vcp=sq(mu/el.rp);
+  return `椭圆轨道：近${c}点速度 ${fv(vp)} 最大，远${c}点速度 ${fv(va)} 最小（r近·v近 = r远·v远）。在远${c}点<b>向前点火</b> ${fv(vca-va)} 可升到半径 ${fd(el.ra)} 的圆轨道；在近${c}点<b>向后点火</b> ${fv(vp-vcp)} 可降到半径 ${fd(el.rp)} 的圆轨道。`; }
+
+function orbitUI(){ const S=cur(),s=S.sel,W=S.W;
+  // 时钟
+  $('hClk').textContent=(S.kind==='solar'?new Date(EPOCH+S.t*1000).toISOString().slice(0,16).replace('T',' ')+' UTC · ':'')+'T+'+ft(S.t)+(S.eff<WARPS[S.wi]*0.95&&!S.paused?' (实际×'+S.eff.toPrecision(2)+')':'');
+  if(s){ const el=elems(W,s); $('hint').innerHTML=hintFor(S,s,el);
+    if(el){ const b=el.b,c=b.ch,kind=el.e<0.01?'圆':el.e<1?'椭圆':el.e<1.0001?'抛物线':'双曲线';
+      const rows=[['状态',`绕${b.name} · ${kind}轨道`],['高度（离表面）',fd(el.r-b.R)],['距'+b.name+'中心 r',fd(el.r)],['速度 v',fv(el.v)],['该处圆轨道速度 √(GM/r)',fv(sq(el.mu/el.r))],['该处逃逸速度 √(2GM/r)',fv(sq(2*el.mu/el.r))],['引力加速度 GM/r²',fa(el.mu/el.r/el.r)],
+        ['半长轴 a',el.e<1?fd(el.a):'—'],['偏心率 e',el.e.toFixed(4)],['近'+c+'点高度',fd(el.rp-b.R)],['远'+c+'点高度',el.e<1?fd(el.ra-b.R):'∞'],['周期 T',ft(el.T)],['比机械能 v²/2 − GM/r',(el.en/1e6).toFixed(3)+' MJ/kg'],['已用 Δv',fv(s.dv)]];
+      if(S.opts.cover&&b.id!=='sun'){const al=Math.acos(Math.min(1,b.R/el.r));rows.push(['覆盖'+b.name+'表面圆心角',deg(2*al).toFixed(1)+'°'],['同高度覆盖整圈赤道至少',Math.ceil(PI/al)+' 颗'])}
+      $('ro').innerHTML=rows.map(([k,v])=>`<dt>${k}</dt><dd>${v}</dd>`).join('');
+      $('thrA').textContent=`a = F/m = ${(s.F/s.mass).toPrecision(3)} m/s²`;
+      const r2=b.R+(+$('hoAlt').value)*1e3,r1=el.r;
+      $('hoInfo').textContent=el.e<0.05&&r2>b.R?`从 ${fd(r1-b.R)} 到 ${fd(r2-b.R)}：Δv₁ = ${fv(Math.abs(sq(el.mu*(2/r1-2/(r1+r2)))-sq(el.mu/r1)))}，Δv₂ = ${fv(Math.abs(sq(el.mu/r2)-sq(el.mu*(2/r2-2/(r1+r2)))))}，转移用时 ${ft(PI*sq(((r1+r2)/2)**3/el.mu))}。`:'当前不是近圆轨道，先圆化再做霍曼转移。';
+      if(S.kind==='solar'){ const T=W.by[$('xT').value],E=W.by.earth,tr=s.events.find(e=>e.info);
+        $('xInfo').textContent=b!==E?'转移助手需从绕地球的圆轨道出发。':tr?`进行中：${tr.label}。所需 Δv ≈ ${fv(tr.info.dv0)}，飞行约 ${(tr.info.tof/DAY).toFixed(1)} 天。`:
+          T.id==='moon'?'按霍曼转移估算：月球需领先飞行器约 110°～115°，从近地轨道约需 3.1 km/s。':`按霍曼转移估算：${T.name}需领先地球 ${deg(PI-T.n*PI*sq(((E.a+T.a)/2)**3/W.by.sun.mu)).toFixed(1)}°，当前 ${deg(wrap(Math.atan2(W.st(T,S.t)[1],W.st(T,S.t)[0])-Math.atan2(W.st(E,S.t)[1],W.st(E,S.t)[0]))).toFixed(1)}°。`; }
+    } else $('ro').innerHTML=`<dt>状态</dt><dd>坠毁于${s.dead.name}</dd><dt>已用 Δv</dt><dd>${fv(s.dv)}</dd>`;
+    const key=s.id+'|'+s.events.map(e=>e.label).join('|');
+    if(evDirty||key!==evKey){evKey=key;evDirty=false;$('evs').innerHTML=s.events.length?'<div class="lab">已计划</div>'+s.events.map((e,i)=>`<div class="ev"><span>${e.label}</span><button data-i="${i}">取消</button></div>`).join(''):''}
+    $('tPro').classList.toggle('on',s.dir>0);$('tRet').classList.toggle('on',s.dir<0);
+  }
+  // 比较表
+  const R=S.ships.map(q=>({q,el:elems(W,q)}));
+  $('cmp').innerHTML='<tr><th>飞行器</th><th>绕</th><th>高度</th><th>速度</th><th>加速度</th><th>周期</th><th>e</th></tr>'+R.map(({q,el})=>el?`<tr><td><span style="color:${q.col}">●</span> ${q.name}</td><td>${el.b.name}</td><td>${fd(el.r-el.b.R)}</td><td>${fv(el.v)}</td><td>${fa(el.mu/el.r/el.r)}</td><td>${ft(el.T)}</td><td>${el.e.toFixed(3)}</td></tr>`:`<tr><td><span style="color:${q.col}">●</span> ${q.name}</td><td colspan="6">已坠毁</td></tr>`).join('');
+  let pr='';const a=R.find(x=>x.q===s);
+  if(a&&a.el) for(const o of R){ if(o===a||!o.el||o.el.b!==a.el.b) continue;
+    const d=hyp(o.el.rx-a.el.rx,o.el.ry-a.el.ry),dv=hyp(o.el.vx-a.el.vx,o.el.vy-a.el.vy),ph=wrap(Math.atan2(o.el.ry,o.el.rx)-Math.atan2(a.el.ry,a.el.rx)),na=TAU/a.el.T,no=TAU/o.el.T;
+    let tm='';if(isFinite(na)&&isFinite(no)&&Math.abs(na-no)>1e-12){let dth=na>no?(ph<0?ph+TAU:ph):(ph>0?TAU-ph:-ph);tm=`，按平均角速度约 ${ft(dth/Math.abs(na-no))} 后${s.name}与${o.q.name}同侧共线（相距最近）`}
+    pr+=`<div>与 <b style="color:${o.q.col}">${o.q.name}</b>：相距 ${fd(d)}，相对速度 ${fv(dv)}，${o.q.name}${ph>=0?'领先':'落后'} ${deg(Math.abs(ph)).toFixed(1)}°${tm}。</div>`; }
+  $('pair').innerHTML=pr?'<div class="lab">追及与相遇（以'+s.name+'为参照）</div>'+pr:'';
+}
+
+// ---------- 自定义星球 ----------
+$('pPre').innerHTML=Object.entries(PPRE).map(([k,v])=>`<option value="${k}">${v[0]}</option>`).join('');
+function setPlanetInputs(R,rho,rot){$('pR').value=R;$('pRho').value=rho;$('pRot').value=rot;$('pM').value=fe(4/3*PI*(R*1e3)**3*rho).replace('×10^','e')}
+$('pPre').onchange=()=>{const p=PPRE[$('pPre').value];setPlanetInputs(p[1],p[2],p[3]);planetInfo()};
+$('pR').oninput=$('pRho').oninput=()=>{$('pM').value=(4/3*PI*(+$('pR').value*1e3)**3*+$('pRho').value).toExponential(4);planetInfo()};
+$('pM').oninput=()=>{const M=parseFloat($('pM').value);if(M>0){$('pRho').value=+(M/(4/3*PI*(+$('pR').value*1e3)**3)).toPrecision(5);planetInfo()}};
+$('pRot').oninput=planetInfo;
+function planetInfo(){ const R=+$('pR').value*1e3,rho=+$('pRho').value,M=4/3*PI*R**3*rho,mu=G*M,rot=+$('pRot').value*3600;if(!(R>0&&rho>0))return;
+  const v1=sq(mu/R),rs=rot>0?Math.cbrt(mu*rot*rot/(4*PI*PI)):0;
+  $('pInfo').innerHTML=`<dt>质量 M</dt><dd>${fe(M)} kg</dd><dt>表面重力加速度</dt><dd>${fa(mu/R/R)}</dd><dt>第一宇宙速度</dt><dd>${fv(v1)}</dd><dt>第二宇宙速度（脱离星球）</dt><dd>${fv(v1*Math.SQRT2)}</dd><dt>近表面卫星周期</dt><dd>${ft(TAU*sq(R**3/mu))}</dd>`+(rs?`<dt>同步轨道高度</dt><dd>${rs>R?fd(rs-R):'在星球内部（无同步卫星）'}</dd>`:'')+(v1>3e7?'<dt class="bad">注意</dt><dd class="bad">速度接近光速，牛顿力学不再适用</dd>':''); }
+$('pApply').onclick=()=>{ const R=+$('pR').value*1e3,rho=+$('pRho').value,rot=+$('pRot').value;if(!(R>0&&rho>0))return note('半径和密度必须为正数',true);
+  const wi=CUST.wi,op=CUST.opts;CUST=new Sim('custom',customWorld(R,rho,rot));CUST.wi=wi;CUST.opts=op;CUST.view.S=fitS(R*3);fillBodies();renderShips();note('星球已更新，飞行器已清空。',true)};
+
+// ---------- 太空电梯 ----------
+const EPRE={earth:[5.972e24,6371,23.9345],mars:[6.417e23,3389.5,24.6229],moon:[7.342e22,1737.4,655.72],fast:[5.972e24,6371,6]};
+const EV={M:5.972e24,R:6.371e6,T:86164.2,lam:1,rc:1e8,mc:0,att:[{id:'car',name:'电梯舱',m:2e4,r:1.6e7,col:'#ff9b54'},{id:'stn',name:'同步基站',m:1e5,r:0,col:'#5ec8f2'}],
+  t:0,wi:3,paused:false,broken:false,objs:[],frame:'rot',view:{S:1,px:0,py:0},sel:'car',scr:null,fit:true};
+let ES=elevStat(EV);
+const eObj=id=>EV.att.find(o=>o.id===id);
+function eLoadInputs(k){const p=EPRE[k];$('eM').value=p[0].toExponential(3);$('eR').value=p[1];$('eT').value=p[2]}
+function eApply(){ const M=parseFloat($('eM').value),R=+$('eR').value*1e3,T=+$('eT').value*3600,lam=+$('eLam').value;
+  if(!(M>0&&R>0&&T>0&&lam>0)) return note('质量、半径、自转周期、线密度都必须为正数',true);
+  Object.assign(EV,{M,R,T,lam}); ES=elevStat(EV);
+  if(ES.rs<=R*1.01){note('这个星球自转太慢或太小：同步轨道在星球内部，无法建造太空电梯。',true)}
+  EV.rc=Math.max(ES.rs*2.4,R*1.5); eObj('stn').r=Math.max(ES.rs,R); eObj('car').r=R+(ES.rs-R)*0.35;
+  eReset(); eAutoBalance(); EV.fit=true; eSliders(); }
+function eAutoBalance(){ ES=elevStat(EV); const g=ES.ge(EV.rc);
+  if(g>=0) return note('配重在同步轨道以下，无论多重都会把绳子往下拽，无法配平。把配重移到同步轨道以上。',true);
+  let need=EV.lam*ES.I(EV.R,EV.rc); for(const o of EV.att) if(o.r<=EV.rc) need+=o.m*ES.ge(o.r);
+  EV.mc=Math.max(0,need/(-g)*1.05); $('eMc').value=+(EV.mc/1e3).toPrecision(5);
+  if(need<=0) note('绳索本身已经足够长，不需要配重也能绷紧。',true); }
+function eSliders(){ const R=EV.R,top=EV.rc;
+  const set=(id,lo,hi,val)=>{const el=$(id);el.dataset.lo=lo;el.dataset.hi=hi;el.value=Math.round((val-lo)/(hi-lo)*1000)};
+  set('eRc',Math.max(R*1.02,ES.rs*0.8),ES.rs*5,EV.rc);set('eCar',R,top,eObj('car').r);set('eStn',R,top,eObj('stn').r);
+  $('eRcV').textContent=fd(EV.rc-R);$('eCarV').textContent=fd(eObj('car').r-R);$('eStnV').textContent=fd(eObj('stn').r-R);$('eMc').value=+(EV.mc/1e3).toPrecision(5); }
+const sv=id=>{const el=$(id),lo=+el.dataset.lo,hi=+el.dataset.hi;return lo+(hi-lo)*el.value/1000};
+$('eRc').oninput=()=>{EV.rc=sv('eRc');for(const o of EV.att)o.r=Math.min(o.r,EV.rc);eSliders()};
+$('eCar').oninput=()=>{eObj('car').r=sv('eCar');eSliders()};$('eStn').oninput=()=>{eObj('stn').r=sv('eStn');eSliders()};
+$('eMc').oninput=()=>{EV.mc=Math.max(0,+$('eMc').value*1e3)};$('eMe').oninput=()=>{eObj('car').m=Math.max(0,+$('eMe').value*1e3)};$('eMs').oninput=()=>{eObj('stn').m=Math.max(0,+$('eMs').value*1e3)};
+$('eAuto').onclick=eAutoBalance;$('eStnSync').onclick=()=>{eObj('stn').r=Math.min(ES.rs,EV.rc);eSliders()};
+$('ePre').onchange=()=>{eLoadInputs($('ePre').value);eApply()};$('eApply').onclick=eApply;
+$('eSel').onclick=e=>{const b=e.target.closest('button');if(!b)return;EV.sel=b.dataset.o;$$('#eSel button').forEach(x=>x.classList.toggle('on',x===b))};
+function fate(r){ const {mu,w,rs}=ES,v=w*r,en=v*v/2-mu/r;
+  if(en>=0) return `<span class="bad">被甩出、逃逸</span>：线速度 ωr = ${fv(v)} ≥ 当地逃逸速度 ${fv(sq(2*mu/r))}`;
+  const a=-mu/(2*en),o=2*a-r;
+  if(Math.abs(r-rs)<rs*2e-3) return `<span class="ok">留在原处</span>：恰好是同步圆轨道，ωr = √(GM/r)`;
+  if(r<rs) return o<EV.R?`<span class="bad">坠回星球</span>：ωr = ${fv(v)} 小于圆轨道速度 ${fv(sq(mu/r))}，椭圆的近星点在地表以下`:`进入椭圆轨道：此处为远星点，近星点高度 ${fd(o-EV.R)}`;
+  return `进入椭圆轨道（被甩高）：此处为近星点，远星点高度 ${fd(o-EV.R)}`; }
+function eBreak(){ if(EV.broken){eReset();return} const th=PI/2+ES.w*EV.t,w=ES.w,mk=(r,kind,o)=>({x:r*Math.cos(th),y:r*Math.sin(th),vx:-w*r*Math.sin(th),vy:w*r*Math.cos(th),r0:r,kind,o,trail:[],land:null});
+  EV.objs=[];const N=44;for(let i=1;i<N;i++)EV.objs.push(mk(EV.R+(EV.rc-EV.R)*i/N,'piece'));
+  for(const o of EV.att) EV.objs.push(mk(o.r,o.id,o)); EV.objs.push(mk(EV.rc,'cw',{name:'配重',col:'#e8ecf4'}));
+  EV.broken=true;EV.tb=EV.t;$('eBreak').textContent='复位';EV.view.py=0;EV.view.px=0;EV.view.S=EV.rc*2.2/Math.min(CW,CH);
+  if(EV.wi<4)EV.wi=4; note('绳索解体：每一段都以断裂瞬间的线速度 ωr 沿切线飞出，此后只受星球引力。',true); }
+function eReset(){EV.broken=false;EV.objs=[];$('eBreak').textContent='钢绳瞬间解体';EV.fit=true}
+$('eBreak').onclick=eBreak;
+function eUpdate(dt){ if(EV.paused) return; const T=WARPS[EV.wi]*dt,{mu,w}=ES,R=EV.R;
+  if(EV.broken) for(const o of EV.objs){ if(o.land!=null) continue; let tt=0,n=0;
+    while(tt<T&&n<3000){ const r=hyp(o.x,o.y),h=Math.min(T-tt,0.01*sq(r*r*r/mu)),f=(x,y)=>{const r2=x*x+y*y,k=-mu/(r2*sq(r2));return [k*x,k*y]};
+      const a1=f(o.x,o.y),a2=f(o.x+o.vx*h/2,o.y+o.vy*h/2),v2x=o.vx+a1[0]*h/2,v2y=o.vy+a1[1]*h/2,a3=f(o.x+v2x*h/2,o.y+v2y*h/2),v3x=o.vx+a2[0]*h/2,v3y=o.vy+a2[1]*h/2,a4=f(o.x+v3x*h,o.y+v3y*h),v4x=o.vx+a3[0]*h,v4y=o.vy+a3[1]*h;
+      o.x+=h/6*(o.vx+2*v2x+2*v3x+v4x);o.y+=h/6*(o.vy+2*v2y+2*v3y+v4y);o.vx+=h/6*(a1[0]+2*a2[0]+2*a3[0]+a4[0]);o.vy+=h/6*(a1[1]+2*a2[1]+2*a3[1]+a4[1]);tt+=h;n++;
+      if(hyp(o.x,o.y)<R){o.land=Math.atan2(o.y,o.x)-w*(EV.t+tt);break} }
+    if(o.kind!=='piece'){const L=o.trail[o.trail.length-1];if(!L||hyp(o.x-L[0],o.y-L[1])>EV.view.S*3)o.trail.push([o.x,o.y,EV.t+T]);if(o.trail.length>3000)o.trail.splice(0,500)} }
+  EV.t+=T; }
+function drawElev(){ const e=EV,v=e.view,{w,rs,ge,tension}=ES,R=e.R;
+  if(e.fit){v.S=e.rc/(CH*0.72);v.py=CH*0.36;v.px=0;e.fit=false}
+  const sc=v.S,cx=CW/2+v.px,cy=CH/2+v.py,rotAt=t=>e.frame==='rot'?w*t:0;
+  const P=(x,y,t=e.t)=>{const a=-rotAt(t),c=Math.cos(a),s=Math.sin(a);return [cx+(x*c-y*s)/sc,cy-(x*s+y*c)/sc]};
+  bgStars(); ctx.lineCap='round';
+  const ring=(r,col,dash,label)=>{ctx.strokeStyle=col;ctx.setLineDash(dash);ctx.lineWidth=1;ctx.beginPath();ctx.arc(cx,cy,r/sc,0,TAU);ctx.stroke();ctx.setLineDash([]);
+    if(label){ctx.fillStyle=col;ctx.font='11px "Noto Sans SC",sans-serif';ctx.textAlign='left';ctx.fillText(label,cx+r/sc*0.72+4,cy-r/sc*0.70)}};
+  ring(rs,'rgba(120,200,255,.55)',[4,6],'同步轨道 '+fd(rs-R));ring(rs*Math.cbrt(2),'rgba(255,150,120,.35)',[2,6],'甩出即逃逸 r > ∛2·r同步');
+  // 星球
+  const pr=Math.max(R/sc,3),g=ctx.createRadialGradient(cx-pr*0.3,cy-pr*0.3,pr*0.1,cx,cy,pr);g.addColorStop(0,'#4f9be6');g.addColorStop(1,'#0f2a4f');ctx.fillStyle=g;ctx.beginPath();ctx.arc(cx,cy,pr,0,TAU);ctx.fill();
+  ctx.strokeStyle='rgba(255,255,255,.18)';ctx.lineWidth=1;for(let k=0;k<6;k++){const a=PI/2+k*PI/3+w*e.t;const [x,y]=P(R*Math.cos(a),R*Math.sin(a));ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(x,y);ctx.stroke()}
+  const th=PI/2+w*e.t,ux=Math.cos(th),uy=Math.sin(th),[ax,ay]=P(R*ux,R*uy);ctx.fillStyle='#e8ecf4';ctx.beginPath();ctx.arc(ax,ay,3.5,0,TAU);ctx.fill();
+  if(!e.broken){ // 绳索按拉力着色
+    const N=80;let Tmax=1;for(let i=0;i<=N;i++)Tmax=Math.max(Tmax,Math.abs(tension(R+(e.rc-R)*i/N)));
+    for(let i=0;i<N;i++){const r1=R+(e.rc-R)*i/N,r2=R+(e.rc-R)*(i+1)/N,T=tension((r1+r2)/2),k=Math.min(1,Math.abs(T)/Tmax),[x1,y1]=P(r1*ux,r1*uy),[x2,y2]=P(r2*ux,r2*uy);
+      ctx.strokeStyle=T<0?'#ff5d4f':`rgb(${90+k*165|0},${170-k*40|0},${235-k*170|0})`;ctx.lineWidth=T<0?1.5:2+k*2.5;ctx.setLineDash(T<0?[3,3]:[]);ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke()}
+    ctx.setLineDash([]);
+    const [sx0,sy0]=P(0,0),[sx1,sy1]=P(ux,uy),L=hyp(sx1-sx0,sy1-sy0)||1;e.scr={cx:sx0,cy:sy0,ux:(sx1-sx0)/L,uy:(sy1-sy0)/L};
+    const objs=[...e.att.map(o=>({...o})),{id:'cw',name:'配重',r:e.rc,col:'#e8ecf4',m:e.mc}];
+    for(const o of objs){ const [x,y]=P(o.r*ux,o.r*uy),gg=ge(o.r),sel=o.id===e.sel;
+      // 等效重力箭头（指向星球为正）
+      const len=Math.min(60,8+Math.log10(1+Math.abs(gg)/0.002)*14)*Math.sign(gg),dx=-e.scr.ux*len,dy=-e.scr.uy*len;
+      if(Math.abs(gg)>1e-4){ctx.strokeStyle=gg>0?'rgba(120,200,255,.9)':'rgba(255,150,100,.9)';ctx.lineWidth=2;ctx.beginPath();const ox=x-e.scr.uy*16,oy=y+e.scr.ux*16;ctx.moveTo(ox,oy);ctx.lineTo(ox+dx,oy+dy);ctx.stroke();
+        const an=Math.atan2(dy,dx);ctx.beginPath();ctx.moveTo(ox+dx,oy+dy);ctx.lineTo(ox+dx-7*Math.cos(an-0.45),oy+dy-7*Math.sin(an-0.45));ctx.lineTo(ox+dx-7*Math.cos(an+0.45),oy+dy-7*Math.sin(an+0.45));ctx.closePath();ctx.fillStyle=ctx.strokeStyle;ctx.fill()}
+      ctx.fillStyle=o.col;ctx.strokeStyle='#060a14';ctx.lineWidth=1.5;const sz=o.id==='cw'?9:o.id==='stn'?7:6;ctx.beginPath();ctx.rect(x-sz,y-sz,sz*2,sz*2);ctx.fill();ctx.stroke();
+      if(sel){ctx.strokeStyle='rgba(255,255,255,.8)';ctx.lineWidth=1;ctx.beginPath();ctx.arc(x,y,sz+6,0,TAU);ctx.stroke()}
+      ctx.fillStyle='#e6ecf6';ctx.font='12px "Noto Sans SC",sans-serif';ctx.textAlign='left';ctx.fillText(`${o.name} · g效 `+(Math.abs(gg)<1e-6?'≈0 失重':`${gg>=0?'↓':'↑'}${Math.abs(gg).toPrecision(3)}`),x+18,y+4); }
+  } else { e.scr=null;
+    for(const o of e.objs){ const pos=o.land!=null?[R*Math.cos(o.land+w*e.t),R*Math.sin(o.land+w*e.t)]:[o.x,o.y],[x,y]=P(pos[0],pos[1]);
+      if(o.kind==='piece'){ctx.fillStyle='rgba(190,200,215,.85)';ctx.fillRect(x-1.5,y-1.5,3,3);continue}
+      if(o.trail.length>1){ctx.strokeStyle=o.o.col;ctx.globalAlpha=0.6;ctx.lineWidth=1.3;ctx.beginPath();o.trail.forEach((q,i)=>{const [a,b]=P(q[0],q[1],q[2]);i?ctx.lineTo(a,b):ctx.moveTo(a,b)});ctx.lineTo(x,y);ctx.stroke();ctx.globalAlpha=1}
+      ctx.fillStyle=o.o.col;ctx.beginPath();ctx.rect(x-6,y-6,12,12);ctx.fill();ctx.fillStyle='#e6ecf6';ctx.font='12px "Noto Sans SC",sans-serif';ctx.textAlign='left';ctx.fillText(o.o.name+(o.land!=null?'（已坠地）':''),x+10,y+4); } }
+  scaleBar(sc); }
+function eUI(){ const e=EV,{mu,w,rs,ge,tension}=ES,R=e.R;
+  $('hClk').textContent='T+'+ft(e.t)+' · 星球已转 '+(e.t/e.T).toFixed(2)+' 圈';
+  $('eInfo').innerHTML=`<dt>自转角速度 ω</dt><dd>${w.toExponential(3)} rad/s</dd><dt>表面重力加速度</dt><dd>${fa(mu/R/R)}</dd><dt>同步轨道半径 r = ∛(GMT²/4π²)</dt><dd>${fd(rs)}</dd><dt>同步轨道高度</dt><dd>${fd(rs-R)}</dd><dt>甩出即逃逸的高度 ∛2·r同步</dt><dd>${fd(rs*Math.cbrt(2)-R)}</dd>`;
+  const o=e.sel==='cw'?{name:'配重',r:e.rc,m:e.mc}:eObj(e.sel),r=o.r,gg=ge(r);
+  const below=tension(r-1),above=e.sel==='cw'?0:tension(r+1);
+  $('eRo').innerHTML=[['高度',fd(r-R)],['距星球中心 r',fd(r)],['万有引力加速度 GM/r²',fa(mu/r/r)],['随星球转动需要的向心加速度 ω²r',fa(w*w*r)],
+    ['等效重力 g效 = GM/r² − ω²r',fa(Math.abs(gg))+(Math.abs(gg)<1e-4*mu/R/R?'（完全失重）':gg>0?'（指向星球）':'（背离星球）')],[o.name+'视重 m·g效',fN(o.m*Math.abs(gg))+(gg>0?' 向下':' 向上')],
+    ['绳拉力：紧挨下方',fN(below)],[e.sel==='cw'?'（配重在绳顶端）':'绳拉力：紧挨上方',e.sel==='cw'?'—':fN(above)],['线速度 ωr',fv(w*r)],['当地圆轨道速度',fv(sq(mu/r))],['当地逃逸速度',fv(sq(2*mu/r))]].map(([k,v])=>`<dt>${k}</dt><dd>${v}</dd>`).join('');
+  let Tm=-Infinity,rm=R,neg=false;for(let i=0;i<=400;i++){const x=R+(e.rc-R)*i/400,T=tension(x);if(T>Tm){Tm=T;rm=x}if(T<0)neg=true}
+  const T0=tension(R);
+  $('eAnchor').innerHTML=(e.rc<=rs?`<span class="bad">配重在同步轨道以下</span>：配重自身也要往下掉，电梯无法维持。<br>`:'')+
+    (T0>=0?`<span class="ok">地面锚点拉力 ${fN(T0)}</span>：整根绳处于拉紧状态。`:`<span class="bad">地面锚点“拉力”为 ${fN(T0)}</span>：配重不足，绳索会整体下坠。请加大配重、提高配重高度，或点“自动配平”。`)+(neg&&T0>=0?'<br><span class="bad">部分绳段受压（红色虚线），绳索不能承受压力。</span>':'')+
+    `<br>最大拉力 ${fN(Tm)}，位于高度 ${fd(rm-R)}（同步轨道附近）。所需材料比强度 T最大/λ ≈ <b>${(Tm/e.lam/1e6).toFixed(1)} MJ/kg</b>（高强钢约 0.3，碳纳米管理论值约 50）。`;
+  $('eFate').innerHTML=(e.broken?'<b>解体后：</b><br>':'<b>若此刻解体：</b><br>')+[...e.att,{name:'配重',r:e.rc}].map(o=>`${o.name}：${fate(o.r)}`).join('<br>');
+  eChart(); }
+function eChart(){ const c=$('eChart'),W=c.clientWidth,H=c.clientHeight;if(!W)return;const d=Math.min(2,devicePixelRatio||1);if(c.width!==W*d){c.width=W*d;c.height=H*d}
+  const x=c.getContext('2d');x.setTransform(d,0,0,d,0,0);x.clearRect(0,0,W,H);const cs=getComputedStyle(document.documentElement),col=n=>cs.getPropertyValue(n).trim();
+  const e=EV,{ge,tension,rs}=ES,R=e.R,L=40,Rt=W-8,top1=8,h1=100,top2=140,h2=86,xm=r=>L+(r-R)/(e.rc-R)*(Rt-L);
+  const sl=g=>Math.sign(g)*Math.log10(1+Math.abs(g)/0.01),yMax=sl(Math.max(ge(R),1)),yMin=sl(Math.min(ge(e.rc),-0.1)),y1=g=>top1+(yMax-sl(g))/(yMax-yMin)*h1;
+  x.font='10px "IBM Plex Mono",monospace';x.fillStyle=col('--mute');x.strokeStyle=col('--line');x.lineWidth=1;x.textAlign='right';
+  for(const t of [10,1,0.1,0,-0.1,-1,-10]){const v=sl(t);if(v>yMax+1e-9||v<yMin-1e-9)continue;const y=y1(t);x.beginPath();x.moveTo(L,y);x.lineTo(Rt,y);x.stroke();x.fillText(String(t),L-4,y+3)}
+  const curve=(f,y,c,lw)=>{x.strokeStyle=c;x.lineWidth=lw;x.beginPath();for(let i=0;i<=200;i++){const r=R+(e.rc-R)*i/200,px=xm(r),py=y(f(r));i?x.lineTo(px,py):x.moveTo(px,py)}x.stroke()};
+  curve(r=>ES.mu/r/r,y1,col('--cold'),1);curve(r=>-ES.w*ES.w*r,y1,col('--hot'),1);curve(ge,y1,col('--ink'),2);
+  x.textAlign='left';x.fillStyle=col('--cold');x.fillText('引力 GM/r²',L+6,top1+12);x.fillStyle=col('--hot');x.fillText('−ω²r',L+90,top1+12);x.fillStyle=col('--ink');x.fillText('g效 (m/s²)',L+140,top1+12);
+  let Tn=0,Tx=1;for(let i=0;i<=200;i++){const T=tension(R+(e.rc-R)*i/200);Tn=Math.min(Tn,T);Tx=Math.max(Tx,T)}
+  const y2=T=>top2+(Tx-T)/(Tx-Tn)*h2;x.strokeStyle=col('--line');x.fillStyle=col('--mute');x.textAlign='right';
+  for(const T of [Tx,Tx/2,0]){const y=y2(T);x.beginPath();x.moveTo(L,y);x.lineTo(Rt,y);x.stroke();x.fillText((T/1e6).toPrecision(2),L-4,y+3)}
+  x.strokeStyle=col('--hot');x.lineWidth=2;x.beginPath();for(let i=0;i<=300;i++){const r=R+(e.rc-R)*i/300,px=xm(r),py=y2(tension(r));i?x.lineTo(px,py):x.moveTo(px,py)}x.stroke();
+  x.textAlign='left';x.fillStyle=col('--hot');x.fillText('拉力 T (MN)',L+6,top2+11);
+  const mark=(r,c,lab)=>{if(r<R||r>e.rc)return;const px=xm(r);x.strokeStyle=c;x.setLineDash([3,3]);x.lineWidth=1;x.beginPath();x.moveTo(px,top1);x.lineTo(px,top2+h2);x.stroke();x.setLineDash([]);x.fillStyle=c;x.textAlign='center';x.fillText(lab,px,top2+h2+12)};
+  mark(rs,col('--mute'),'同步');mark(eObj('car').r,'#ff9b54','舱');
+  x.fillStyle=col('--mute');x.textAlign='left';x.fillText('地面',L,H-2);x.textAlign='right';x.fillText('配重 '+fd(e.rc-R),Rt,H-2); }
+
+// ---------- HUD、视图与指针 ----------
+const VIEWS={solar:[['earth','以地球为中心'],['earth:moon','地月系统'],['moon','以月球为中心'],['sun:inner','内太阳系'],['sun:outer','整个太阳系'],['mars','以火星为中心'],['venus','以金星为中心'],['jupiter','以木星为中心'],['ship','跟随选中飞行器']],
+  custom:[['planet','以星球为中心'],['ship','跟随选中飞行器']],elev:[['rot','随星球转动的视角'],['in','惯性系视角']]};
+const FIT={earth:1.6e7,'earth:moon':4.8e8,moon:1.2e7,'sun:inner':4e11,'sun:outer':4.8e12,mars:2.4e7,venus:3e7,jupiter:8e8};
+function syncView(){ const o=VIEWS[tab];$('hView').innerHTML=o.map(([k,n])=>`<option value="${k}">${n}</option>`).join('');
+  if(tab==='elev') $('hView').value=EV.frame; else{const S=cur(),c=S.view.c;$('hView').value=o.some(x=>x[0]===c)?c:o[0][0]} }
+$('hView').onchange=()=>{ const k=$('hView').value;if(tab==='elev'){EV.frame=k;return}
+  const S=cur(),[c]=k.split(':');S.view.c=c;S.view.px=S.view.py=0;if(FIT[k])S.view.S=fitS(FIT[k]);else if(c==='planet')S.view.S=fitS(S.W.bodies[0].R*3); };
+const view=()=>tab==='elev'?EV.view:cur().view;
+function zoomAt(mx,my,f){const v=view(),ox=CW/2+v.px,oy=CH/2+v.py;v.S=Math.min(3e11,Math.max(5,v.S*f));v.px=mx-CW/2-(mx-ox)/f;v.py=my-CH/2-(my-oy)/f}
+$('zIn').onclick=()=>zoomAt(CW/2,CH/2,1/1.6);$('zOut').onclick=()=>zoomAt(CW/2,CH/2,1.6);
+const sim=()=>tab==='elev'?EV:cur();
+$('hPlay').onclick=()=>{const s=sim();s.paused=!s.paused};$('hUp').onclick=()=>{const s=sim();s.wi=Math.min(WARPS.length-1,s.wi+1)};$('hDn').onclick=()=>{const s=sim();s.wi=Math.max(0,s.wi-1)};
+const ptr=new Map();let drag=null,pinch=0;
+cv.addEventListener('pointerdown',e=>{cv.setPointerCapture(e.pointerId);ptr.set(e.pointerId,[e.offsetX,e.offsetY]);
+  if(ptr.size===2){const [a,b]=[...ptr.values()];pinch=hyp(a[0]-b[0],a[1]-b[1]);drag=null;return}
+  let obj=null;if(tab==='elev'&&EV.scr){const s=EV.scr;for(const o of [...EV.att,{id:'cw',r:EV.rc}]){const x=s.cx+s.ux*o.r/EV.view.S,y=s.cy+s.uy*o.r/EV.view.S;if(hyp(x-e.offsetX,y-e.offsetY)<20){obj=o.id;break}}}
+  drag={x:e.offsetX,y:e.offsetY,moved:false,obj};if(obj){EV.sel=obj;$$('#eSel button').forEach(x=>x.classList.toggle('on',x.dataset.o===obj))}});
+cv.addEventListener('pointermove',e=>{if(!ptr.has(e.pointerId))return;ptr.set(e.pointerId,[e.offsetX,e.offsetY]);
+  if(ptr.size===2){const [a,b]=[...ptr.values()],d=hyp(a[0]-b[0],a[1]-b[1]);if(pinch)zoomAt((a[0]+b[0])/2,(a[1]+b[1])/2,pinch/d);pinch=d;return}
+  if(!drag)return;const dx=e.offsetX-drag.x,dy=e.offsetY-drag.y;if(Math.abs(dx)+Math.abs(dy)>3)drag.moved=true;
+  if(drag.obj&&EV.scr){const s=EV.scr,r=((e.offsetX-s.cx)*s.ux+(e.offsetY-s.cy)*s.uy)*EV.view.S;
+    if(drag.obj==='cw'){EV.rc=Math.max(EV.R*1.02,Math.min(ES.rs*5,r));for(const o of EV.att)o.r=Math.min(o.r,EV.rc)}else eObj(drag.obj).r=Math.max(EV.R,Math.min(EV.rc,r));eSliders()}
+  else{const v=view();v.px+=dx;v.py+=dy}drag.x=e.offsetX;drag.y=e.offsetY});
+const up=e=>{if(drag&&!drag.moved&&tab!=='elev'){const S=cur();let best=null,bd=22;for(const [s,x,y] of S.hits||[]){const d=hyp(x-e.offsetX,y-e.offsetY);if(d<bd){bd=d;best=s}}if(best){S.sel=best;renderShips()}}
+  ptr.delete(e.pointerId);if(ptr.size<2)pinch=0;if(!ptr.size)drag=null};
+cv.addEventListener('pointerup',up);cv.addEventListener('pointercancel',up);
+cv.addEventListener('wheel',e=>{e.preventDefault();zoomAt(e.offsetX,e.offsetY,e.deltaY>0?1.18:1/1.18)},{passive:false});
+cv.addEventListener('dblclick',()=>{const v=view();v.px=v.py=0;if(tab==='elev')EV.fit=!EV.broken});
+
+// 显示选项
+const OPT={oTrail:'trail',oConic:'conic',oCover:'cover',oSoi:'soi',oPause:'pause'};
+for(const [id,k] of Object.entries(OPT)) $(id).onchange=()=>{cur().opts[k]=$(id).checked};
+$('oClear').onclick=()=>{for(const s of cur().ships)s.trail=[]};
+function syncOpts(){const S=cur();for(const [id,k] of Object.entries(OPT))$(id).checked=S.opts[k]}
+
+function setTab(t){ tab=t;$$('.tabs button').forEach(b=>b.classList.toggle('on',b.dataset.tab===t));
+  $('pO').hidden=t==='elev';$('pE').hidden=t!=='elev';$('secPlanet').hidden=t!=='custom';$('xfer').hidden=t!=='solar';$('oSoiF').hidden=t!=='solar';
+  syncView(); if(t!=='elev'){fillBodies();renderShips();syncOpts()} else EV.fit=!EV.broken; }
+$$('.tabs button').forEach(b=>b.onclick=()=>setTab(b.dataset.tab));
+
+// ---------- 初始示例 ----------
+(function init(){
+  const E=SOL.W.by.earth;
+  SOL.launch({body:E,alt:400e3,v:sq(E.mu/(E.R+400e3)),el:0,az:90,auto:false,mass:1000,F:500});
+  SOL.launch({body:E,alt:400e3,v:1.1*sq(E.mu/(E.R+400e3)),el:0,az:90,auto:false,mass:1000,F:500});
+  SOL.view.S=fitS(FIT.earth); SOL.sel=SOL.ships[1];
+  const p=CUST.W.bodies[0];
+  CUST.launch({body:p,alt:p.R*0.5,v:sq(p.mu/(p.R*1.5)),el:0,az:90,auto:false,mass:1000,F:500});
+  CUST.launch({body:p,alt:0,v:1.25*sq(p.mu/p.R),el:0,az:-90,auto:false,mass:1000,F:200});
+  CUST.view.S=fitS(p.R*4.5);
+  $('pPre').value='demo';setPlanetInputs(...PPRE.demo.slice(1));planetInfo();
+  eLoadInputs('earth');eApply();
+  setTab('solar');
+})();
+
+let last=performance.now(),lastUI=0;
+function frame(now){ const dt=Math.min(0.05,(now-last)/1000);last=now;
+  if(tab==='elev'){eUpdate(dt);drawElev()}else{const S=cur();S.update(dt);drawSim(S)}
+  const s=sim();$('hWarp').textContent='×'+(WARPS[s.wi]>=1e4?WARPS[s.wi].toExponential(0).replace('e+','e'):WARPS[s.wi]);$('hPlay').textContent=s.paused?'继续':'暂停';
+  if(now-lastUI>140){lastUI=now;try{tab==='elev'?eUI():orbitUI()}catch(err){console.error(err)}}
+  requestAnimationFrame(frame); }
+requestAnimationFrame(frame);
+</script>
+
+</body></html>
